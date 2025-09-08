@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Go Game - 囲碁</title>
+  <link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+  <div class="game-container">
+    <div class="board-container">
+      <div class="game-title">
+        <h1>Go</h1>
+        <div class="japanese">囲碁</div>
+      </div>
+      <canvas id="gameCanvas"></canvas>
+    </div>
+    
+    <div class="game-info">
+      <div class="current-turn">
+        <h3>Current Turn</h3>
+        <div id="currentPlayer" class="current-player black">Black</div>
+      </div>
+      
+      <div class="score-section">
+        <h3>Captured Stones</h3>
+        <div class="scores">
+          <div class="score-item">
+            <div class="label">Black</div>
+            <div id="blackScore" class="value">0</div>
+          </div>
+          <div class="score-item">
+            <div class="label">White</div>
+            <div id="whiteScore" class="value">0</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="controls">
+        <button id="pass" class="btn btn-secondary">Pass</button>
+        <button id="newGame" class="btn btn-primary">New Game</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.ts"></script>
+</body>
+</html>
+</tml>
