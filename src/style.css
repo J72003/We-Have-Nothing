@@ -6,7 +6,7 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: radial-gradient(circle at center, #e8e3d9, #b6a78a);
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -15,13 +15,14 @@ body {
 }
 
 .game-container {
-  background: white;
+  background: #fdfcf9;
   border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   padding: 30px;
   display: flex;
   gap: 30px;
   align-items: flex-start;
+  border: 4px solid #8B5A2B;
 }
 
 .board-container {
@@ -39,6 +40,7 @@ body {
   font-size: 2.5rem;
   color: #2c3e50;
   margin-bottom: 5px;
+  text-shadow: 1px 1px 0px #fff;
 }
 
 .game-title .japanese {
@@ -48,61 +50,67 @@ body {
 }
 
 #gameCanvas {
-  border: 3px solid #8B4513;
-  border-radius: 8px;
+  border: 6px solid #8B5A2B;
+  border-radius: 12px;
   cursor: crosshair;
-  background: #D4A574;
+  background: #d7b37d; /* fallback if JS doesn't paint gradient */
 }
 
 .game-info {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  min-width: 200px;
+  min-width: 220px;
 }
 
+/* Current turn panel */
 .current-turn {
   text-align: center;
   padding: 20px;
-  background: #f8f9fa;
+  background: #fefcf8;
   border-radius: 12px;
-  border: 2px solid #e9ecef;
+  border: 2px solid #8B5A2B;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.15);
 }
 
 .current-turn h3 {
-  color: #495057;
+  color: #5a4631;
   margin-bottom: 10px;
   font-size: 1.1rem;
 }
 
 .current-player {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: bold;
   padding: 8px 16px;
   border-radius: 8px;
   display: inline-block;
+  border: 2px solid #444;
 }
 
 .current-player.black {
   background: #2C2C2C;
   color: white;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.2);
 }
 
 .current-player.white {
   background: #F5F5F5;
   color: #2C2C2C;
-  border: 2px solid #ddd;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
 }
 
+/* Scoreboard panel */
 .score-section {
-  background: #f8f9fa;
+  background: #fefcf8;
   padding: 20px;
   border-radius: 12px;
-  border: 2px solid #e9ecef;
+  border: 2px solid #8B5A2B;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.15);
 }
 
 .score-section h3 {
-  color: #495057;
+  color: #5a4631;
   margin-bottom: 15px;
   text-align: center;
   font-size: 1.1rem;
@@ -129,12 +137,14 @@ body {
   font-size: 1.8rem;
   font-weight: bold;
   color: #2c3e50;
+  text-shadow: 1px 1px 0px #fff;
 }
 
+/* Buttons */
 .controls {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .btn {
@@ -145,26 +155,29 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  text-align: center;
 }
 
 .btn-primary {
-  background: #3498db;
+  background: linear-gradient(145deg, #2d89d6, #2368a2);
   color: white;
+  border: 2px solid #1b4f7a;
 }
 
 .btn-primary:hover {
-  background: #2980b9;
-  transform: translateY(-1px);
+  background: linear-gradient(145deg, #3498db, #267bbd);
+  transform: translateY(-2px);
 }
 
 .btn-secondary {
-  background: #95a5a6;
+  background: linear-gradient(145deg, #aaa, #888);
   color: white;
+  border: 2px solid #666;
 }
 
 .btn-secondary:hover {
-  background: #7f8c8d;
-  transform: translateY(-1px);
+  background: linear-gradient(145deg, #bbb, #999);
+  transform: translateY(-2px);
 }
 
 @media (max-width: 768px) {

@@ -5,19 +5,30 @@ interface GameState {
   whiteScore: number;
 }
 
+interface CapturedStone {
+  row: number;
+  col: number;
+  color: 'black' | 'white';
+  opacity: number;
+}
+
 class SimpleGoGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private gameState: GameState;
   private readonly BOARD_SIZE = 19;
-  private readonly CELL_SIZE = 25;
-  private readonly STONE_RADIUS = 10;
+  private readonly CELL_SIZE = 30;
+  private readonly STONE_RADIUS = 12;
+  private lastMove: [number, number] | null = null;
+  private hoverCell: [number, number] | null = null;
+  private capturedStones: CapturedStone[] = [];
+  private animationFrame: number | null = null;
+  private audioCtx: AudioContext;
 
   constructor() {
     this.canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
     this.ctx = this.canvas.getContext('2d')!;
     
-    // Set canvas size
     const canvasSize = this.CELL_SIZE * (this.BOARD_SIZE + 1);
     this.canvas.width = canvasSize;
     this.canvas.height = canvasSize;
@@ -29,8 +40,10 @@ class SimpleGoGame {
       whiteScore: 0
     };
 
+    this.audioCtx = new AudioContext();
+
     this.setupEventListeners();
-    this.draw();
+    this.animate();
     this.updateUI();
   }
 
@@ -46,6 +59,27 @@ class SimpleGoGame {
       this.placeStone(row, col);
     });
 
+    this.canvas.addEventListener('mousemove', (e) => {
+      const rect = this.canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      const col = Math.round((x - this.CELL_SIZE / 2) / this.CELL_SIZE);
+      const row = Math.round((y - this.CELL_SIZE / 2) / this.CELL_SIZE);
+
+      if (this.isValidPosition(row, col)) {
+        this.hoverCell = [row, col];
+      } else {
+        this.hoverCell = null;
+      }
+      this.draw();
+    });
+
+    this.canvas.addEventListener('mouseleave', () => {
+      this.hoverCell = null;
+      this.draw();
+    });
+
     document.getElementById('newGame')?.addEventListener('click', () => {
       this.newGame();
     });
@@ -56,18 +90,25 @@ class SimpleGoGame {
   }
 
   private placeStone(row: number, col: number) {
-    if (row < 0 || row >= this.BOARD_SIZE || col < 0 || col >= this.BOARD_SIZE) {
-      return;
-    }
-
-    if (this.gameState.board[row][col] !== null) {
+    if (!this.isValidPosition(row, col) || this.gameState.board[row][col] !== null) {
       return;
     }
 
     this.gameState.board[row][col] = this.gameState.currentPlayer;
+
+    // Check captures
     this.checkCaptures(row, col);
+
+    // Suicide rule check
+    const group = this.getGroup(row, col);
+    if (this.hasNoLiberties(group)) {
+      this.gameState.board[row][col] = null;
+      return;
+    }
+
+    this.lastMove = [row, col];
+    this.playPlaceSound();
     this.switchPlayer();
-    this.draw();
     this.updateUI();
   }
 
@@ -92,6 +133,8 @@ class SimpleGoGame {
 
   private getGroup(row: number, col: number): [number, number][] {
     const color = this.gameState.board[row][col];
+    if (!color) return [];
+
     const visited = new Set<string>();
     const group: [number, number][] = [];
     const stack: [number, number][] = [[row, col]];
@@ -134,14 +177,14 @@ class SimpleGoGame {
         }
       }
     }
-
     return true;
   }
 
   private captureGroup(group: [number, number][]) {
-    const capturedColor = this.gameState.board[group[0][0]][group[0][1]];
+    const capturedColor = this.gameState.board[group[0][0]][group[0][1]] as 'black' | 'white';
     
     for (const [row, col] of group) {
+      this.capturedStones.push({ row, col, color: capturedColor, opacity: 1 });
       this.gameState.board[row][col] = null;
     }
 
@@ -150,6 +193,9 @@ class SimpleGoGame {
     } else {
       this.gameState.blackScore += group.length;
     }
+
+    this.playCaptureSound();
+    this.updateUI();
   }
 
   private isValidPosition(row: number, col: number): boolean {
@@ -172,35 +218,45 @@ class SimpleGoGame {
       blackScore: 0,
       whiteScore: 0
     };
-    this.draw();
+    this.lastMove = null;
+    this.capturedStones = [];
     this.updateUI();
+  }
+
+  // === Rendering & Animation ===
+
+  private animate() {
+    this.draw();
+    this.animationFrame = requestAnimationFrame(() => this.animate());
   }
 
   private draw() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.drawBoard();
     this.drawStones();
+    this.drawCapturedStones();
+    this.drawHoverPreview();
   }
 
   private drawBoard() {
-    // Board background
-    this.ctx.fillStyle = '#D4A574';
+    // Wooden look (gradient fallback for no texture)
+    const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
+    gradient.addColorStop(0, "#d7b37d");
+    gradient.addColorStop(1, "#c49a6c");
+    this.ctx.fillStyle = gradient;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
     // Grid lines
-    this.ctx.strokeStyle = '#8B4513';
-    this.ctx.lineWidth = 1;
+    this.ctx.strokeStyle = "rgba(70, 40, 10, 0.9)";
+    this.ctx.lineWidth = 1.2;
 
     for (let i = 0; i < this.BOARD_SIZE; i++) {
       const pos = (i + 0.5) * this.CELL_SIZE;
-      
-      // Vertical lines
       this.ctx.beginPath();
       this.ctx.moveTo(pos, this.CELL_SIZE / 2);
       this.ctx.lineTo(pos, this.canvas.height - this.CELL_SIZE / 2);
       this.ctx.stroke();
 
-      // Horizontal lines
       this.ctx.beginPath();
       this.ctx.moveTo(this.CELL_SIZE / 2, pos);
       this.ctx.lineTo(this.canvas.width - this.CELL_SIZE / 2, pos);
@@ -209,13 +265,11 @@ class SimpleGoGame {
 
     // Star points
     const starPoints = [3, 9, 15];
-    this.ctx.fillStyle = '#8B4513';
-    
+    this.ctx.fillStyle = "#3a1f0d";
     for (const row of starPoints) {
       for (const col of starPoints) {
         const x = (col + 0.5) * this.CELL_SIZE;
         const y = (row + 0.5) * this.CELL_SIZE;
-        
         this.ctx.beginPath();
         this.ctx.arc(x, y, 3, 0, 2 * Math.PI);
         this.ctx.fill();
@@ -231,21 +285,78 @@ class SimpleGoGame {
           const x = (col + 0.5) * this.CELL_SIZE;
           const y = (row + 0.5) * this.CELL_SIZE;
 
+          // Shadow for realism
+          this.ctx.shadowColor = "rgba(0,0,0,0.4)";
+          this.ctx.shadowBlur = 4;
+          this.ctx.shadowOffsetX = 2;
+          this.ctx.shadowOffsetY = 2;
+
+          // Radial gradient for 3D stone look
+          const gradient = this.ctx.createRadialGradient(x - 4, y - 4, 4, x, y, this.STONE_RADIUS);
+          if (stone === "black") {
+            gradient.addColorStop(0, "#555");
+            gradient.addColorStop(1, "#000");
+          } else {
+            gradient.addColorStop(0, "#fff");
+            gradient.addColorStop(1, "#ddd");
+          }
+
+          this.ctx.fillStyle = gradient;
           this.ctx.beginPath();
           this.ctx.arc(x, y, this.STONE_RADIUS, 0, 2 * Math.PI);
-          
-          if (stone === 'black') {
-            this.ctx.fillStyle = '#2C2C2C';
-          } else {
-            this.ctx.fillStyle = '#F5F5F5';
-          }
-          
           this.ctx.fill();
-          this.ctx.strokeStyle = '#666';
-          this.ctx.lineWidth = 1;
-          this.ctx.stroke();
+
+          // Reset shadow
+          this.ctx.shadowBlur = 0;
+          this.ctx.shadowOffsetX = 0;
+          this.ctx.shadowOffsetY = 0;
+
+          // Highlight last move
+          if (this.lastMove && this.lastMove[0] === row && this.lastMove[1] === col) {
+            this.ctx.strokeStyle = "red";
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, this.STONE_RADIUS + 3, 0, 2 * Math.PI);
+            this.ctx.stroke();
+          }
         }
       }
+    }
+  }
+
+  private drawCapturedStones() {
+    this.capturedStones = this.capturedStones.filter(stone => stone.opacity > 0);
+
+    for (const stone of this.capturedStones) {
+      const x = (stone.col + 0.5) * this.CELL_SIZE;
+      const y = (stone.row + 0.5) * this.CELL_SIZE;
+
+      this.ctx.save();
+      this.ctx.globalAlpha = stone.opacity;
+      this.ctx.translate(x, y);
+      this.ctx.scale(stone.opacity, stone.opacity); // shrink
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, this.STONE_RADIUS, 0, 2 * Math.PI);
+      this.ctx.fillStyle = stone.color === "black" ? "#000" : "#fff";
+      this.ctx.fill();
+      this.ctx.restore();
+
+      stone.opacity -= 0.02;
+    }
+  }
+
+  private drawHoverPreview() {
+    if (!this.hoverCell) return;
+    const [row, col] = this.hoverCell;
+    if (this.isValidPosition(row, col) && this.gameState.board[row][col] === null) {
+      const x = (col + 0.5) * this.CELL_SIZE;
+      const y = (row + 0.5) * this.CELL_SIZE;
+      this.ctx.globalAlpha = 0.5;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, this.STONE_RADIUS, 0, 2 * Math.PI);
+      this.ctx.fillStyle = this.gameState.currentPlayer === "black" ? "#2C2C2C" : "#F5F5F5";
+      this.ctx.fill();
+      this.ctx.globalAlpha = 1.0;
     }
   }
 
@@ -258,18 +369,36 @@ class SimpleGoGame {
       currentPlayerEl.textContent = this.gameState.currentPlayer === 'black' ? 'Black' : 'White';
       currentPlayerEl.className = `current-player ${this.gameState.currentPlayer}`;
     }
+    if (blackScoreEl) blackScoreEl.textContent = this.gameState.blackScore.toString();
+    if (whiteScoreEl) whiteScoreEl.textContent = this.gameState.whiteScore.toString();
+  }
 
-    if (blackScoreEl) {
-      blackScoreEl.textContent = this.gameState.blackScore.toString();
-    }
+  // === Sound Effects ===
 
-    if (whiteScoreEl) {
-      whiteScoreEl.textContent = this.gameState.whiteScore.toString();
-    }
+  private playPlaceSound() {
+    const osc = this.audioCtx.createOscillator();
+    const gain = this.audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 600;
+    gain.gain.setValueAtTime(0.05, this.audioCtx.currentTime);
+    osc.connect(gain).connect(this.audioCtx.destination);
+    osc.start();
+    osc.stop(this.audioCtx.currentTime + 0.1);
+  }
+
+  private playCaptureSound() {
+    const osc = this.audioCtx.createOscillator();
+    const gain = this.audioCtx.createGain();
+    osc.type = "square";
+    osc.frequency.value = 300;
+    gain.gain.setValueAtTime(0.08, this.audioCtx.currentTime);
+    osc.connect(gain).connect(this.audioCtx.destination);
+    osc.start();
+    osc.stop(this.audioCtx.currentTime + 0.15);
   }
 }
 
-// Initialize the game when the page loads
+// === Start Game ===
 document.addEventListener('DOMContentLoaded', () => {
   new SimpleGoGame();
 });
