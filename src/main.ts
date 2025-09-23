@@ -1,8 +1,11 @@
 interface GameState {
   board: (null | 'black' | 'white')[][];
   currentPlayer: 'black' | 'white';
-  blackScore: number;
-  whiteScore: number;
+  capturedStones: { black: number; white: number };
+  territoryScore: { black: number; white: number };
+  totalScore: { black: number; white: number };
+  gamePhase: 'playing' | 'demo' | 'finished';
+  moveCount: number;
 }
 
 interface CapturedStone {
@@ -12,7 +15,7 @@ interface CapturedStone {
   opacity: number;
 }
 
-class SimpleGoGame {
+class FutureGoGameDemo {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private gameState: GameState;
@@ -24,6 +27,8 @@ class SimpleGoGame {
   private capturedStones: CapturedStone[] = [];
   private animationFrame: number | null = null;
   private audioCtx: AudioContext;
+  private demoInterval: number | null = null;
+  private territory: (null | 'black' | 'white' | 'neutral')[][] = [];
 
   constructor() {
     this.canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
@@ -36,15 +41,20 @@ class SimpleGoGame {
     this.gameState = {
       board: Array(this.BOARD_SIZE).fill(null).map(() => Array(this.BOARD_SIZE).fill(null)),
       currentPlayer: 'black',
-      blackScore: 0,
-      whiteScore: 0
+      capturedStones: { black: 0, white: 0 },
+      territoryScore: { black: 0, white: 0 },
+      totalScore: { black: 0, white: 0 },
+      gamePhase: 'demo',
+      moveCount: 0
     };
 
+    this.territory = Array(this.BOARD_SIZE).fill(null).map(() => Array(this.BOARD_SIZE).fill(null));
     this.audioCtx = new AudioContext();
 
     this.setupEventListeners();
     this.animate();
     this.updateUI();
+    this.startDemo();
   }
 
   private setupEventListeners() {
@@ -87,6 +97,64 @@ class SimpleGoGame {
     document.getElementById('pass')?.addEventListener('click', () => {
       this.pass();
     });
+
+    document.getElementById('startDemo')?.addEventListener('click', () => {
+      this.startDemo();
+    });
+
+    document.getElementById('stopDemo')?.addEventListener('click', () => {
+      this.stopDemo();
+    });
+  }
+
+  private startDemo() {
+    this.gameState.gamePhase = 'demo';
+    this.demoInterval = window.setInterval(() => {
+      this.makeDemoMove();
+    }, 800);
+    this.updateUI();
+  }
+
+  private stopDemo() {
+    if (this.demoInterval) {
+      clearInterval(this.demoInterval);
+      this.demoInterval = null;
+    }
+    this.gameState.gamePhase = 'playing';
+    this.updateUI();
+  }
+
+  private makeDemoMove() {
+    const emptyPositions: [number, number][] = [];
+    
+    for (let row = 0; row < this.BOARD_SIZE; row++) {
+      for (let col = 0; col < this.BOARD_SIZE; col++) {
+        if (this.gameState.board[row][col] === null) {
+          emptyPositions.push([row, col]);
+        }
+      }
+    }
+
+    if (emptyPositions.length === 0) {
+      this.stopDemo();
+      return;
+    }
+
+    // Prefer moves near existing stones for more realistic gameplay
+    const strategicPositions = emptyPositions.filter(([row, col]) => {
+      const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      return directions.some(([dr, dc]) => {
+        const newRow = row + dr;
+        const newCol = col + dc;
+        return this.isValidPosition(newRow, newCol) && 
+               this.gameState.board[newRow][newCol] !== null;
+      });
+    });
+
+    const positions = strategicPositions.length > 0 ? strategicPositions : emptyPositions;
+    const [row, col] = positions[Math.floor(Math.random() * positions.length)];
+    
+    this.placeStone(row, col);
   }
 
   private placeStone(row: number, col: number) {
@@ -108,6 +176,8 @@ class SimpleGoGame {
 
     this.lastMove = [row, col];
     this.playPlaceSound();
+    this.gameState.moveCount++;
+    this.calculateTerritoryScore();
     this.switchPlayer();
     this.updateUI();
   }
@@ -189,13 +259,97 @@ class SimpleGoGame {
     }
 
     if (capturedColor === 'black') {
-      this.gameState.whiteScore += group.length;
+      this.gameState.capturedStones.white += group.length;
     } else {
-      this.gameState.blackScore += group.length;
+      this.gameState.capturedStones.black += group.length;
     }
 
     this.playCaptureSound();
+    this.calculateTerritoryScore();
     this.updateUI();
+  }
+
+  private calculateTerritoryScore() {
+    // Reset territory
+    this.territory = Array(this.BOARD_SIZE).fill(null).map(() => Array(this.BOARD_SIZE).fill(null));
+    
+    const visited = new Set<string>();
+    let blackTerritory = 0;
+    let whiteTerritory = 0;
+
+    for (let row = 0; row < this.BOARD_SIZE; row++) {
+      for (let col = 0; col < this.BOARD_SIZE; col++) {
+        if (this.gameState.board[row][col] === null && !visited.has(`${row},${col}`)) {
+          const territory = this.getTerritory(row, col, visited);
+          const owner = this.getTerritoryOwner(territory);
+          
+          for (const [r, c] of territory) {
+            this.territory[r][c] = owner;
+          }
+
+          if (owner === 'black') {
+            blackTerritory += territory.length;
+          } else if (owner === 'white') {
+            whiteTerritory += territory.length;
+          }
+        }
+      }
+    }
+
+    this.gameState.territoryScore = { black: blackTerritory, white: whiteTerritory };
+    this.gameState.totalScore = {
+      black: this.gameState.capturedStones.black + this.gameState.territoryScore.black,
+      white: this.gameState.capturedStones.white + this.gameState.territoryScore.white
+    };
+  }
+
+  private getTerritory(startRow: number, startCol: number, visited: Set<string>): [number, number][] {
+    const territory: [number, number][] = [];
+    const stack: [number, number][] = [[startRow, startCol]];
+
+    while (stack.length > 0) {
+      const [row, col] = stack.pop()!;
+      const key = `${row},${col}`;
+
+      if (visited.has(key) || this.gameState.board[row][col] !== null) continue;
+      
+      visited.add(key);
+      territory.push([row, col]);
+
+      const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      for (const [dr, dc] of directions) {
+        const newRow = row + dr;
+        const newCol = col + dc;
+        if (this.isValidPosition(newRow, newCol)) {
+          stack.push([newRow, newCol]);
+        }
+      }
+    }
+
+    return territory;
+  }
+
+  private getTerritoryOwner(territory: [number, number][]): 'black' | 'white' | 'neutral' {
+    const surroundingStones = new Set<'black' | 'white'>();
+    
+    for (const [row, col] of territory) {
+      const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+      for (const [dr, dc] of directions) {
+        const newRow = row + dr;
+        const newCol = col + dc;
+        if (this.isValidPosition(newRow, newCol)) {
+          const stone = this.gameState.board[newRow][newCol];
+          if (stone) {
+            surroundingStones.add(stone);
+          }
+        }
+      }
+    }
+
+    if (surroundingStones.size === 1) {
+      return Array.from(surroundingStones)[0];
+    }
+    return 'neutral';
   }
 
   private isValidPosition(row: number, col: number): boolean {
@@ -215,11 +369,16 @@ class SimpleGoGame {
     this.gameState = {
       board: Array(this.BOARD_SIZE).fill(null).map(() => Array(this.BOARD_SIZE).fill(null)),
       currentPlayer: 'black',
-      blackScore: 0,
-      whiteScore: 0
+      capturedStones: { black: 0, white: 0 },
+      territoryScore: { black: 0, white: 0 },
+      totalScore: { black: 0, white: 0 },
+      gamePhase: 'playing',
+      moveCount: 0
     };
     this.lastMove = null;
     this.capturedStones = [];
+    this.territory = Array(this.BOARD_SIZE).fill(null).map(() => Array(this.BOARD_SIZE).fill(null));
+    this.stopDemo();
     this.updateUI();
   }
 
@@ -233,6 +392,7 @@ class SimpleGoGame {
   private draw() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.drawBoard();
+    this.drawTerritory();
     this.drawStones();
     this.drawCapturedStones();
     this.drawHoverPreview();
@@ -273,6 +433,28 @@ class SimpleGoGame {
         this.ctx.beginPath();
         this.ctx.arc(x, y, 3, 0, 2 * Math.PI);
         this.ctx.fill();
+      }
+    }
+  }
+
+  private drawTerritory() {
+    if (this.gameState.gamePhase === 'demo') {
+      for (let row = 0; row < this.BOARD_SIZE; row++) {
+        for (let col = 0; col < this.BOARD_SIZE; col++) {
+          const owner = this.territory[row][col];
+          if (owner && owner !== 'neutral' && this.gameState.board[row][col] === null) {
+            const x = (col + 0.5) * this.CELL_SIZE;
+            const y = (row + 0.5) * this.CELL_SIZE;
+            
+            this.ctx.save();
+            this.ctx.globalAlpha = 0.3;
+            this.ctx.fillStyle = owner === 'black' ? '#2C2C2C' : '#F5F5F5';
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, 6, 0, 2 * Math.PI);
+            this.ctx.fill();
+            this.ctx.restore();
+          }
+        }
       }
     }
   }
@@ -346,7 +528,7 @@ class SimpleGoGame {
   }
 
   private drawHoverPreview() {
-    if (!this.hoverCell) return;
+    if (!this.hoverCell || this.gameState.gamePhase === 'demo') return;
     const [row, col] = this.hoverCell;
     if (this.isValidPosition(row, col) && this.gameState.board[row][col] === null) {
       const x = (col + 0.5) * this.CELL_SIZE;
@@ -362,15 +544,38 @@ class SimpleGoGame {
 
   private updateUI() {
     const currentPlayerEl = document.getElementById('currentPlayer');
-    const blackScoreEl = document.getElementById('blackScore');
-    const whiteScoreEl = document.getElementById('whiteScore');
+    const blackCapturedEl = document.getElementById('blackCaptured');
+    const whiteCapturedEl = document.getElementById('whiteCaptured');
+    const blackTerritoryEl = document.getElementById('blackTerritory');
+    const whiteTerritoryEl = document.getElementById('whiteTerritory');
+    const blackTotalEl = document.getElementById('blackTotal');
+    const whiteTotalEl = document.getElementById('whiteTotal');
+    const gameStatusEl = document.getElementById('gameStatus');
+    const moveCountEl = document.getElementById('moveCount');
 
     if (currentPlayerEl) {
       currentPlayerEl.textContent = this.gameState.currentPlayer === 'black' ? 'Black' : 'White';
       currentPlayerEl.className = `current-player ${this.gameState.currentPlayer}`;
     }
-    if (blackScoreEl) blackScoreEl.textContent = this.gameState.blackScore.toString();
-    if (whiteScoreEl) whiteScoreEl.textContent = this.gameState.whiteScore.toString();
+    
+    if (blackCapturedEl) blackCapturedEl.textContent = this.gameState.capturedStones.black.toString();
+    if (whiteCapturedEl) whiteCapturedEl.textContent = this.gameState.capturedStones.white.toString();
+    if (blackTerritoryEl) blackTerritoryEl.textContent = this.gameState.territoryScore.black.toString();
+    if (whiteTerritoryEl) whiteTerritoryEl.textContent = this.gameState.territoryScore.white.toString();
+    if (blackTotalEl) blackTotalEl.textContent = this.gameState.totalScore.black.toString();
+    if (whiteTotalEl) whiteTotalEl.textContent = this.gameState.totalScore.white.toString();
+    
+    if (gameStatusEl) {
+      if (this.gameState.gamePhase === 'demo') {
+        gameStatusEl.textContent = 'Demo Mode - Auto Playing';
+        gameStatusEl.className = 'game-status demo';
+      } else {
+        gameStatusEl.textContent = 'Manual Play Mode';
+        gameStatusEl.className = 'game-status playing';
+      }
+    }
+    
+    if (moveCountEl) moveCountEl.textContent = this.gameState.moveCount.toString();
   }
 
   // === Sound Effects ===
@@ -400,5 +605,5 @@ class SimpleGoGame {
 
 // === Start Game ===
 document.addEventListener('DOMContentLoaded', () => {
-  new SimpleGoGame();
+  new FutureGoGameDemo();
 });
