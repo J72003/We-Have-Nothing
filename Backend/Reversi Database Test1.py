@@ -28,17 +28,6 @@ def init_db():
     )
     """)
 
-    # Add example players
-    example_players = ["Austin", "Donna"]
-    for name in example_players:
-        try:
-            cur.execute("INSERT INTO players (name) VALUES (?)", (name,))
-        except IntegrityError:
-            print(f"Player '{name}' already exists.")
-
-    conn.commit()
-    conn.close()
-
 # Add player by name
 def add_player(name):
     conn = connect(DB_NAME)
@@ -140,7 +129,7 @@ if __name__ == "__main__":
     record_game(1, 2, 35, 30)  # Austin vs Donna
     record_game(3, 1, 25, 40)  # Charlie vs Austin
     record_game(7, 4, 20, 45)  # Eve vs Dana
-    record_game(9, 8, 33, 32)  # Izzy vs Adrian
+    record_game(9, 8, 33, 32)  # Shelby vs Robert
 
     # Step 5: Show games with scores
     show_games()
