@@ -130,8 +130,8 @@ if __name__ == "__main__":
     init_db()
 
     # Step 2: Add more players
-    add_player("Xavier")
-    add_player("Callie")
+    add_player("Jay")
+    add_player("Kimberly")
 
     # Step 3: Show current players
     show_players()
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     record_game(1, 2, 35, 30)  # Austin vs Donna
     record_game(3, 1, 25, 40)  # Charlie vs Austin
     record_game(7, 4, 20, 45)  # Eve vs Dana
-    record_game(5, 6, 32, 33)  # Austin vs Donna
+    record_game(9, 8, 33, 32)  # Izzy vs Adrian
 
     # Step 5: Show games with scores
     show_games()
