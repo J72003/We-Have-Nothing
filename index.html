@@ -23,20 +23,58 @@
       </div>
       
       <div class="score-section">
-        <h3>Captured Stones</h3>
+        <h3>Live Scoreboard</h3>
         <div class="scores">
-          <div class="score-item">
-            <div class="label">Black</div>
-            <div id="blackScore" class="value">0</div>
+          <div class="score-category">
+            <h4>Captured Stones</h4>
+            <div class="score-row">
+              <span class="label">Black:</span>
+              <span id="blackCaptured" class="value">0</span>
+            </div>
+            <div class="score-row">
+              <span class="label">White:</span>
+              <span id="whiteCaptured" class="value">0</span>
+            </div>
           </div>
-          <div class="score-item">
-            <div class="label">White</div>
-            <div id="whiteScore" class="value">0</div>
+          
+          <div class="score-category">
+            <h4>Territory</h4>
+            <div class="score-row">
+              <span class="label">Black:</span>
+              <span id="blackTerritory" class="value">0</span>
+            </div>
+            <div class="score-row">
+              <span class="label">White:</span>
+              <span id="whiteTerritory" class="value">0</span>
+            </div>
+          </div>
+          
+          <div class="score-category total">
+            <h4>Total Score</h4>
+            <div class="score-row">
+              <span class="label">Black:</span>
+              <span id="blackTotal" class="value total-score">0</span>
+            </div>
+            <div class="score-row">
+              <span class="label">White:</span>
+              <span id="whiteTotal" class="value total-score">0</span>
+            </div>
           </div>
         </div>
       </div>
       
+      <div class="game-stats">
+        <h3>Game Stats</h3>
+        <div class="stat-item">
+          <span class="label">Moves:</span>
+          <span id="moveCount" class="value">0</span>
+        </div>
+        <div id="gameStatus" class="game-status demo">Demo Mode - Auto Playing</div>
+      </div>
+      
       <div class="controls">
+        <button id="startDemo" class="btn btn-demo">Start Demo</button>
+        <button id="stopDemo" class="btn btn-demo">Stop Demo</button>
         <button id="pass" class="btn btn-secondary">Pass</button>
         <button id="newGame" class="btn btn-primary">New Game</button>
       </div>

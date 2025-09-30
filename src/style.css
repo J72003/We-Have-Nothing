@@ -6,7 +6,7 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: radial-gradient(circle at center, #e8e3d9, #b6a78a);
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -15,13 +15,14 @@ body {
 }
 
 .game-container {
-  background: white;
+  background: #fdfcf9;
   border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   padding: 30px;
   display: flex;
   gap: 30px;
   align-items: flex-start;
+  border: 4px solid #8B5A2B;
 }
 
 .board-container {
@@ -39,6 +40,7 @@ body {
   font-size: 2.5rem;
   color: #2c3e50;
   margin-bottom: 5px;
+  text-shadow: 1px 1px 0px #fff;
 }
 
 .game-title .japanese {
@@ -48,93 +50,195 @@ body {
 }
 
 #gameCanvas {
-  border: 3px solid #8B4513;
-  border-radius: 8px;
+  border: 6px solid #8B5A2B;
+  border-radius: 12px;
   cursor: crosshair;
-  background: #D4A574;
+  background: #d7b37d; /* fallback if JS doesn't paint gradient */
 }
 
 .game-info {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  min-width: 200px;
+  min-width: 280px;
 }
 
+/* Current turn panel */
 .current-turn {
   text-align: center;
   padding: 20px;
-  background: #f8f9fa;
+  background: #fefcf8;
   border-radius: 12px;
-  border: 2px solid #e9ecef;
+  border: 2px solid #8B5A2B;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.15);
 }
 
 .current-turn h3 {
-  color: #495057;
+  color: #5a4631;
   margin-bottom: 10px;
   font-size: 1.1rem;
 }
 
 .current-player {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: bold;
   padding: 8px 16px;
   border-radius: 8px;
   display: inline-block;
+  border: 2px solid #444;
 }
 
 .current-player.black {
   background: #2C2C2C;
   color: white;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.2);
 }
 
 .current-player.white {
   background: #F5F5F5;
   color: #2C2C2C;
-  border: 2px solid #ddd;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
 }
 
+/* Scoreboard panel */
 .score-section {
-  background: #f8f9fa;
+  background: #fefcf8;
   padding: 20px;
   border-radius: 12px;
-  border: 2px solid #e9ecef;
+  border: 2px solid #8B5A2B;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.15);
 }
 
 .score-section h3 {
-  color: #495057;
+  color: #5a4631;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+.score-category {
+  margin-bottom: 15px;
+}
+
+.score-category:last-child {
+  margin-bottom: 0;
+}
+
+.score-category h4 {
+  font-size: 0.9rem;
+  color: #7a5a42;
+  margin-bottom: 8px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.score-category.total {
+  border-top: 2px solid #8B5A2B;
+  padding-top: 15px;
+  margin-top: 15px;
+}
+
+.score-category.total h4 {
+  color: #5a4631;
+  font-weight: bold;
+}
+
+.score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.score-row:last-child {
+  margin-bottom: 0;
+}
+
+.score-row .label {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.score-row .value {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #2c3e50;
+  text-shadow: 1px 1px 0px #fff;
+  min-width: 30px;
+  text-align: right;
+}
+
+.total-score {
+  font-size: 1.4rem !important;
+  color: #8B5A2B !important;
+}
+
+/* Game stats panel */
+.game-stats {
+  background: #fefcf8;
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px solid #8B5A2B;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.game-stats h3 {
+  color: #5a4631;
   margin-bottom: 15px;
   text-align: center;
   font-size: 1.1rem;
 }
 
-.scores {
+.stat-item {
   display: flex;
   justify-content: space-between;
-  gap: 15px;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
-.score-item {
-  text-align: center;
-  flex: 1;
-}
-
-.score-item .label {
+.stat-item .label {
   font-size: 0.9rem;
   color: #6c757d;
-  margin-bottom: 5px;
 }
 
-.score-item .value {
-  font-size: 1.8rem;
+.stat-item .value {
+  font-size: 1.2rem;
   font-weight: bold;
   color: #2c3e50;
 }
 
+.game-status {
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.game-status.demo {
+  background: linear-gradient(145deg, #e74c3c, #c0392b);
+  color: white;
+  animation: pulse 2s infinite;
+}
+
+.game-status.playing {
+  background: linear-gradient(145deg, #27ae60, #229954);
+  color: white;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Buttons */
 .controls {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .btn {
@@ -145,26 +249,40 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  text-align: center;
 }
 
 .btn-primary {
-  background: #3498db;
+  background: linear-gradient(145deg, #2d89d6, #2368a2);
   color: white;
+  border: 2px solid #1b4f7a;
 }
 
 .btn-primary:hover {
-  background: #2980b9;
-  transform: translateY(-1px);
+  background: linear-gradient(145deg, #3498db, #267bbd);
+  transform: translateY(-2px);
 }
 
 .btn-secondary {
-  background: #95a5a6;
+  background: linear-gradient(145deg, #aaa, #888);
   color: white;
+  border: 2px solid #666;
 }
 
 .btn-secondary:hover {
-  background: #7f8c8d;
-  transform: translateY(-1px);
+  background: linear-gradient(145deg, #bbb, #999);
+  transform: translateY(-2px);
+}
+
+.btn-demo {
+  background: linear-gradient(145deg, #f39c12, #e67e22);
+  color: white;
+  border: 2px solid #d35400;
+}
+
+.btn-demo:hover {
+  background: linear-gradient(145deg, #f1c40f, #f39c12);
+  transform: translateY(-2px);
 }
 
 @media (max-width: 768px) {
