@@ -5,7 +5,63 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Go Game - 囲碁</title>
   <link rel="stylesheet" href="src/style.css">
+
+  <style>
+    /* Player name section */
+    .player-setup {
+      margin-bottom: 15px;
+      background: #f9f9f9;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .player-setup h3 {
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .player-inputs {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .player-inputs label {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .player-inputs input {
+      padding: 5px 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    /* Leaderboard styling */
+    .leaderboard-box {
+      margin-top: 15px;
+      background: #f4f2ee;
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .leaderboard-box h3 {
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .leaderboard-box table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .leaderboard-box th, .leaderboard-box td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #ccc;
+      text-align: left;
+    }
+    .leaderboard-box th {
+      background: #e2d7c2;
+      font-weight: bold;
+    }
+  </style>
 </head>
+
 <body>
   <div class="game-container">
     <div class="board-container">
@@ -17,6 +73,17 @@
     </div>
     
     <div class="game-info">
+      <!-- Player naming area -->
+      <div class="player-setup">
+        <h3>Players</h3>
+        <div class="player-inputs">
+          <label for="blackName">Black Player:</label>
+          <input id="blackName" type="text" placeholder="e.g. Alice" value="BlackAI">
+          <label for="whiteName">White Player:</label>
+          <input id="whiteName" type="text" placeholder="e.g. Bob" value="WhiteAI">
+        </div>
+      </div>
+
       <div class="current-turn">
         <h3>Current Turn</h3>
         <div id="currentPlayer" class="current-player black">Black</div>
@@ -61,6 +128,14 @@
             </div>
           </div>
         </div>
+
+        <!-- Leaderboard Added Here -->
+        <div id="leaderboard" class="leaderboard-box">
+          <h3>🏆 Leaderboard</h3>
+          <table>
+            <tr><th>Player</th><th>Wins</th></tr>
+          </table>
+        </div>
       </div>
       
       <div class="game-stats">
@@ -69,7 +144,7 @@
           <span class="label">Moves:</span>
           <span id="moveCount" class="value">0</span>
         </div>
-        <div id="gameStatus" class="game-status demo">Demo Mode - Auto Playing</div>
+        <div id="gameStatus" class="game-status playing">Manual Play Mode</div>
       </div>
       
       <div class="controls">
@@ -84,4 +159,3 @@
   <script type="module" src="src/main.ts"></script>
 </body>
 </html>
-</tml>

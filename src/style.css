@@ -300,3 +300,15 @@ body {
     height: auto;
   }
 }
+
+.player-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+.player-inputs input {
+  padding: 4px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
