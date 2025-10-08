@@ -17,42 +17,18 @@ interface CapturedStone {
 }
 
 // ===================== config =====================
-const API_BASE = "http://127.0.0.1:8010";
+// Mock leaderboard data for demo
+const mockLeaderboard = [
+  { name: "AlphaGo", wins: 15 },
+  { name: "KataGo", wins: 12 },
+  { name: "LeelaZero", wins: 8 },
+  { name: "Human Pro", wins: 5 },
+  { name: "Amateur", wins: 2 }
+];
 
-// Helpers to read player names from inputs (with sensible defaults)
-function getPlayerNames(): { black: string; white: string } {
-  const blackInput = document.getElementById("blackName") as HTMLInputElement | null;
-  const whiteInput = document.getElementById("whiteName") as HTMLInputElement | null;
-  const black = (blackInput?.value?.trim() || "BlackAI").slice(0, 40);
-  const white = (whiteInput?.value?.trim() || "WhiteAI").slice(0, 40);
-  return { black, white };
-}
-
-// ===================== backend calls =====================
-async function addPlayer(name: string) {
-  await fetch(`${API_BASE}/players`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
-  });
-}
-
-async function recordGame(player1: string, player2: string, score1: number, score2: number) {
-  await fetch(`${API_BASE}/games`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      player1,
-      player2,
-      score_p1: score1,
-      score_p2: score2,
-    }),
-  });
-}
-
-async function getLeaderboard() {
-  const res = await fetch(`${API_BASE}/leaderboard`);
-  const data = await res.json();
+function getLeaderboard() {
+  // Simulate dynamic leaderboard updates
+  const shuffled = [...mockLeaderboard].sort(() => Math.random() - 0.5);
 
   const container = document.getElementById("leaderboard");
   if (!container) return;
@@ -61,7 +37,7 @@ async function getLeaderboard() {
     <h3>🏆 Leaderboard</h3>
     <table class="lb">
       <tr><th>Player</th><th>Wins</th></tr>
-      ${data.map((p: any) => `<tr><td>${p.name}</td><td>${p.wins}</td></tr>`).join("")}
+      ${shuffled.map((p: any) => `<tr><td>${p.name}</td><td>${p.wins}</td></tr>`).join("")}
     </table>
   `;
 }
@@ -111,9 +87,9 @@ class FutureGoGameDemo {
     this.animate();
     this.updateUI();
 
-    // Initial leaderboard render + live refresh every 3s
+    // Initial leaderboard render + live refresh every 5s for demo
     getLeaderboard();
-    setInterval(getLeaderboard, 3000);
+    setInterval(getLeaderboard, 5000);
   }
 
   private setupEventListeners() {
@@ -158,38 +134,16 @@ class FutureGoGameDemo {
   private startDemo() {
     if (this.demoInterval) return;
     this.gameState.gamePhase = "demo";
-    let ticks = 0;
 
-    this.demoInterval = window.setInterval(async () => {
+    this.demoInterval = window.setInterval(() => {
       this.makeDemoMove();
-      ticks++;
-
-      // Update backend more frequently for testing
-      if (ticks % 5 === 0) {
-        const { black, white } = getPlayerNames();
-        try {
-          await addPlayer(black);
-          await addPlayer(white);
-          await recordGame(
-            black,
-            white,
-            this.gameState.totalScore.black,
-            this.gameState.totalScore.white
-          );
-          await getLeaderboard();
-          console.log("Partial game update sent.");
-        } catch (err) {
-          console.error("Failed to update backend mid-demo:", err);
-        }
-      }
-      // Removed 150-move limit for continuous demo
     }, 150); // fast mode (~7 moves/sec)
 
     this.updateUI();
     console.log("Demo started (fast mode).");
   }
 
-  private async stopDemo() {
+  private stopDemo() {
     if (this.demoInterval) {
       clearInterval(this.demoInterval);
       this.demoInterval = null;
@@ -197,22 +151,7 @@ class FutureGoGameDemo {
 
     this.gameState.gamePhase = "finished";
     this.updateUI();
-
-    const { black, white } = getPlayerNames();
-    try {
-      await addPlayer(black);
-      await addPlayer(white);
-      await recordGame(
-        black,
-        white,
-        this.gameState.totalScore.black,
-        this.gameState.totalScore.white
-      );
-      console.log("Final game recorded to backend.");
-      await getLeaderboard();
-    } catch (err) {
-      console.error("Backend connection failed on stopDemo:", err);
-    }
+    console.log("Demo stopped.");
   }
 
   // ===================== GAME LOGIC =====================
