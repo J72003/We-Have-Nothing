@@ -77,6 +77,9 @@ class FutureGoGame {
     document.getElementById("newGame")?.addEventListener("click", () => this.newGame());
     document.getElementById("pass")?.addEventListener("click", () => this.pass());
     document.getElementById("stopDemo")?.addEventListener("click", () => this.stopDemo());
+    document
+      .getElementById("viewFullLeaderboard")
+      ?.addEventListener("click", () => showFullLeaderboardModal());
 
     this.canvas.addEventListener("click", (e) => {
       if (this.mode === "AIAI" || this.gameState.gamePhase !== "playing") return;
@@ -101,9 +104,7 @@ class FutureGoGame {
     if (!this.isValidPosition(row, col) || this.gameState.board[row][col] !== null) return;
     this.gameState.board[row][col] = this.gameState.currentPlayer;
 
-    // ✅ Capture handling
     this.handleCaptures(row, col);
-
     this.playSound(600);
     this.gameState.moveCount++;
     this.gameState.consecutivePasses = 0;
@@ -114,7 +115,7 @@ class FutureGoGame {
     this.updateUI();
   }
 
-  // ✅ Capture Detection Logic
+  // ✅ Capture Detection
   private handleCaptures(row: number, col: number) {
     const opponent = this.gameState.currentPlayer === "black" ? "white" : "black";
     const dirs = [
@@ -123,7 +124,6 @@ class FutureGoGame {
       [0, 1],
       [0, -1],
     ];
-
     const toCapture: [number, number][] = [];
 
     const hasLiberty = (r: number, c: number, visited = new Set<string>()): boolean => {
@@ -134,7 +134,6 @@ class FutureGoGame {
       const stone = this.gameState.board[r][c];
       if (stone === null) return true;
       if (stone !== opponent) return false;
-
       for (const [dr, dc] of dirs) {
         const nr = r + dr;
         const nc = c + dc;
@@ -143,16 +142,19 @@ class FutureGoGame {
       return false;
     };
 
-    const markGroup = (r: number, c: number, visited = new Set<string>(), group: [number, number][] = []): [number, number][] => {
+    const markGroup = (
+      r: number,
+      c: number,
+      visited = new Set<string>(),
+      group: [number, number][] = []
+    ): [number, number][] => {
       if (!this.isValidPosition(r, c)) return group;
       const key = `${r},${c}`;
       if (visited.has(key)) return group;
       visited.add(key);
       if (this.gameState.board[r][c] !== opponent) return group;
       group.push([r, c]);
-      for (const [dr, dc] of dirs) {
-        markGroup(r + dr, c + dc, visited, group);
-      }
+      for (const [dr, dc] of dirs) markGroup(r + dr, c + dc, visited, group);
       return group;
     };
 
@@ -163,22 +165,14 @@ class FutureGoGame {
       if (this.gameState.board[nr][nc] === opponent) {
         const group = markGroup(nr, nc);
         const visited = new Set<string>();
-        if (!hasLiberty(nr, nc, visited)) {
-          toCapture.push(...group);
-        }
+        if (!hasLiberty(nr, nc, visited)) toCapture.push(...group);
       }
     }
 
-    // Remove captured stones
-    for (const [r, c] of toCapture) {
-      this.gameState.board[r][c] = null;
-    }
-
-    // Update captured count
+    for (const [r, c] of toCapture) this.gameState.board[r][c] = null;
     const count = toCapture.length;
-    if (count > 0) {
+    if (count > 0)
       this.gameState.capturedStones[this.gameState.currentPlayer] += count;
-    }
   }
 
   private pass() {
@@ -215,7 +209,6 @@ class FutureGoGame {
     if (this.demoInterval) return;
     this.mode = "AIAI";
     this.gameState.gamePhase = "demo";
-
     this.demoInterval = window.setInterval(() => {
       this.aiMove();
       if (this.gameState.moveCount >= 150) this.stopDemo();
@@ -232,7 +225,6 @@ class FutureGoGame {
   private async endGame(reason: string) {
     if (this.gameState.gamePhase === "finished") return;
     this.gameState.gamePhase = "finished";
-
     this.updateScores();
 
     const blackStones = this.gameState.totalScore.black;
@@ -244,10 +236,11 @@ class FutureGoGame {
 
     let winnerText = "";
     if (blackTotal > whiteTotal) winnerText = `🏆 ${this.player1Name} (Black) wins!`;
-    else if (whiteTotal > blackTotal) winnerText = `🏆 ${this.player2Name} (White) wins!`;
+    else if (whiteTotal > blackTotal)
+      winnerText = `🏆 ${this.player2Name} (White) wins!`;
     else winnerText = "🤝 It's a draw!";
 
-    const summary = `
+    alert(`
 🎮 Game Over: ${reason}
 ──────────────────────────
 ⚫ ${this.player1Name} (Black)
@@ -261,8 +254,7 @@ Territory: ${whiteTerritory}
 Total: ${whiteTotal}
 
 ${winnerText}
-`;
-    alert(summary);
+`);
 
     const p1 = this.mode === "AIAI" ? "BlackAI" : this.player1Name;
     const p2 = this.mode === "AIAI" ? "WhiteAI" : this.player2Name;
@@ -278,7 +270,7 @@ ${winnerText}
     if (isFull) this.endGame("Board filled up");
   }
 
-  // ======================= Scoring & Territory =======================
+  // ======================= Scoring =======================
   private updateScores() {
     const blackStones = this.gameState.board.flat().filter((s) => s === "black").length;
     const whiteStones = this.gameState.board.flat().filter((s) => s === "white").length;
@@ -372,7 +364,6 @@ ${winnerText}
     return row >= 0 && row < this.BOARD_SIZE && col >= 0 && col < this.BOARD_SIZE;
   }
 
-  // ======================= Drawing =======================
   private animate() {
     this.draw();
     this.animationFrame = requestAnimationFrame(() => this.animate());
@@ -439,6 +430,7 @@ ${winnerText}
     }
   }
 
+  // ======================= UI Update =======================
   private updateUI() {
     const currentPlayerEl = document.getElementById("currentPlayer");
     const moveCountEl = document.getElementById("moveCount");
@@ -448,7 +440,6 @@ ${winnerText}
         this.gameState.currentPlayer === "black" ? "Black" : "White";
     if (moveCountEl) moveCountEl.textContent = this.gameState.moveCount.toString();
 
-    // 🟢 NEW LIVE SCOREBOARD UPDATES
     const blackCapturedEl = document.getElementById("blackCaptured");
     const whiteCapturedEl = document.getElementById("whiteCaptured");
     const blackTerritoryEl = document.getElementById("blackTerritory");
@@ -474,6 +465,7 @@ ${winnerText}
     if (whiteTotalEl) whiteTotalEl.textContent = whiteTotal.toString();
   }
 
+  // ======================= Sound Effects =======================
   private playSound(freq: number) {
     const osc = this.audioCtx.createOscillator();
     const gain = this.audioCtx.createGain();
@@ -505,16 +497,102 @@ async function recordGame(player1: string, player2: string, score1: number, scor
   });
 }
 
+// ======================= Leaderboard Logic =======================
 async function getLeaderboard() {
   const res = await fetch(`${API_BASE}/leaderboard`);
   const data = await res.json();
+
+  // ✅ Filter players: only valid names, with wins, sorted top 10
+  const filtered = data
+    .filter(
+      (p: any) =>
+        p.wins > 0 &&
+        !["Player 1", "Player 2", "TestPlayer", "Default", "test"].includes(p.name)
+    )
+    .sort((a: any, b: any) => b.wins - a.wins)
+    .slice(0, 10);
+
   const container = document.getElementById("leaderboard");
   if (!container) return;
+
   container.innerHTML = `
-    <h3>🏆 Leaderboard</h3>
-    <table><tr><th>Player</th><th>Wins</th></tr>
-      ${data.map((p: any) => `<tr><td>${p.name}</td><td>${p.wins}</td></tr>`).join("")}
-    </table>`;
+    <h3>🏆 Leaderboard (Top 10)</h3>
+    <table>
+      <tr><th>Player</th><th>Wins</th></tr>
+      ${filtered
+        .map((p: any) => `<tr><td>${p.name}</td><td>${p.wins}</td></tr>`)
+        .join("")}
+    </table>
+    <button id="viewFullLeaderboard" class="btn btn-secondary" style="margin-top:8px;">
+      View Full Leaderboard
+    </button>
+  `;
+
+  document
+    .getElementById("viewFullLeaderboard")
+    ?.addEventListener("click", () => showFullLeaderboardModal());
 }
 
+// ======================= Full Leaderboard Modal =======================
+async function showFullLeaderboardModal() {
+  const res = await fetch(`${API_BASE}/leaderboard`);
+  const data = await res.json();
+
+  const valid = data
+    .filter(
+      (p: any) =>
+        !["Player 1", "Player 2", "TestPlayer", "Default", "test"].includes(p.name)
+    )
+    .sort((a: any, b: any) => b.wins - a.wins);
+
+  // ✅ Create modal container if not exists
+  let modal = document.getElementById("leaderboardModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "leaderboardModal";
+    modal.style.position = "fixed";
+    modal.style.top = "0";
+    modal.style.left = "0";
+    modal.style.width = "100%";
+    modal.style.height = "100%";
+    modal.style.background = "rgba(0,0,0,0.6)";
+    modal.style.display = "flex";
+    modal.style.alignItems = "center";
+    modal.style.justifyContent = "center";
+    modal.style.zIndex = "9999";
+    modal.innerHTML = `
+      <div style="
+        background: #f8f5ef;
+        padding: 20px;
+        border-radius: 12px;
+        width: 350px;
+        max-height: 500px;
+        overflow-y: auto;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      ">
+        <h2 style="text-align:center;">🏆 Full Leaderboard</h2>
+        <table style="width:100%; border-collapse:collapse;">
+          <tr style="background:#e0d5c0;"><th>Player</th><th>Wins</th></tr>
+          ${valid
+            .map(
+              (p: any) =>
+                `<tr><td style="padding:6px;">${p.name}</td><td style="text-align:right;">${p.wins}</td></tr>`
+            )
+            .join("")}
+        </table>
+        <div style="text-align:center; margin-top:12px;">
+          <button id="closeLeaderboardModal" class="btn btn-primary">Close</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  // Close modal logic
+  document
+    .getElementById("closeLeaderboardModal")
+    ?.addEventListener("click", () => modal?.remove());
+}
+
+// ======================= Initialize Game =======================
 document.addEventListener("DOMContentLoaded", () => new FutureGoGame());
