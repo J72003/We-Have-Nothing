@@ -38,7 +38,7 @@ class FutureGoGame {
     this.setupEventListeners();
     this.animate();
     this.updateUI();
-    getLeaderboard();
+    this.updateLeaderboard();
   }
 
   private createInitialState(): GameState {
