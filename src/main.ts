@@ -430,7 +430,7 @@ ${winnerText}
     }
   }
 
-    // ======================= UI Update =======================
+   // ======================= UI Update =======================
   private updateUI() {
     const currentPlayerEl = document.getElementById("currentPlayer");
     const moveCountEl = document.getElementById("moveCount");
