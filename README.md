@@ -179,7 +179,9 @@ This project is licensed under the **MIT License** — free to use and modify.
 ## 👥 Credits
 
 **Developed by:** We Have Nothing
+
 **Stack:** TypeScript · Vite · FastAPI · Canvas API
+
 **Inspiration:** Traditional Go (囲碁) with modern web interactivity
 
 
