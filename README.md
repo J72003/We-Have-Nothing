@@ -12,3 +12,174 @@ Unoccupied intersections on the board are known as liberties. Stones of the same
 
 The game ends either when one side forfeits or if both sides agree that all possible moves have been exhausted. Stones that both sides agree could be inevitably captured are marked out as ‘dead’ and removed from the board while others are considered ‘alive’. These decisions must be made with the consent of both players. Then, one side’s score is counted and compared to 180-1/2, and if it is lower, the other side wins, if it’s higher, then they win, and if it is equal, it is considered a draw. 
 In modern national competitions, 2-3/4 points are deducted from black’s score to counteract the advantage of black going first. The player may not move a stone once it is placed down on the board unless it slips out of the player’s hand by accident. 
+
+Here’s a clean, professional **GitHub README.md** for your project — formatted for a repository like `GoGame-AI` or `FutureGo`.
+
+---
+
+# 🏯 Future Go (囲碁) — AI vs Human Web Game
+
+An interactive **Go (囲碁)** web game built with **TypeScript**, featuring:
+
+* Human vs Human (PVP)
+* Human (Black) vs AI
+* Human (White) vs AI
+* AI vs AI Demo mode
+  with real-time score tracking and a live leaderboard backed by a FastAPI backend.
+
+---
+
+## 🎮 Features
+
+### ⚔️ Game Modes
+
+* **PVP:** Local multiplayer, two human players alternate turns.
+* **Human vs AI (Black):** You play as Black, AI plays White.
+* **Human vs AI (White):** You play as White, AI starts as Black.
+* **AI vs AI Demo:** Watch two AIs play automatically in real time.
+
+### 📊 Live Scoreboard
+
+Displays:
+
+* Captured stones
+* Territory ownership (auto-calculated)
+* Total score (stones + territory)
+
+### 🧠 AI Opponent
+
+* Basic random-move AI logic (expandable for heuristic or ML-based moves)
+* Automatic handling of turn order and pass logic
+
+### 🏆 Leaderboard
+
+* Full backend-integrated leaderboard that logs player names and win counts
+* Click **“View Full Leaderboard”** to open a modal view of all recorded players
+* Automatically filters out test and default entries
+
+### 🪶 Smooth UI
+
+* Canvas-based Go board with animated updates
+* Simple control panel for name entry and mode switching
+* Responsive design, styled with custom CSS
+
+---
+
+## 🧩 Project Structure
+
+```
+project/
+│
+├── src/
+│   ├── main.ts          # Core game logic (TypeScript)
+│   ├── style.css        # Additional CSS styling (optional)
+│
+├── index.html           # UI and DOM layout
+├── server.py            # FastAPI backend (records players/games)
+├── requirements.txt     # Python dependencies
+├── package.json         # Node.js frontend dependencies
+└── README.md            # You are here
+```
+
+---
+
+## ⚙️ Installation & Setup
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/futurego.git
+cd futurego
+```
+
+### 2. Backend Setup (Python / FastAPI)
+
+Create a virtual environment and install dependencies:
+
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+Run the server:
+
+```bash
+uvicorn server:app --reload --port 8010
+```
+
+> The backend runs at `http://127.0.0.1:8010`
+
+---
+
+### 3. Frontend Setup (TypeScript / Vite)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Then open the local server (usually `http://localhost:5173`) to play.
+
+---
+
+## 💾 API Endpoints (FastAPI)
+
+| Endpoint       | Method | Description                            |
+| -------------- | ------ | -------------------------------------- |
+| `/players`     | POST   | Add or register a player               |
+| `/games`       | POST   | Record game results                    |
+| `/leaderboard` | GET    | Fetch all players and their win counts |
+
+---
+
+## 🧠 Gameplay Summary
+
+| Action          | Description                                            |
+| --------------- | ------------------------------------------------------ |
+| **Click board** | Place a stone on an empty intersection                 |
+| **Pass**        | Skips your turn (two consecutive passes = end of game) |
+| **New Game**    | Resets board and scoreboard                            |
+| **Start Demo**  | Starts AI vs AI autoplay                               |
+| **Stop Demo**   | Ends demo mode                                         |
+
+---
+
+## 🪄 Technical Highlights
+
+* **Canvas Rendering:** Dynamic Go grid with live updates
+* **Score Computation:** Uses BFS flood-fill to detect territory ownership
+* **Sound Feedback:** Simple tone when placing stones
+* **Leaderboard:** Fully dynamic, synced with backend database
+* **TypeScript Architecture:** Class-based, modular, maintainable structure
+
+---
+
+## 🧑‍💻 Future Improvements
+
+* Smarter AI using Minimax or Monte Carlo Tree Search
+* Online multiplayer with WebSocket support
+* Undo/Redo system
+* Board size options (9×9, 13×13, 19×19)
+* Persistent leaderboard and game history visualization
+
+---
+
+## 📸 Preview
+
+
+---
+
+## 🧾 License
+
+This project is licensed under the **MIT License** — free to use and modify.
+
+---
+
+## 👥 Credits
+
+**Developed by:** We Have Nothing
+**Stack:** TypeScript · Vite · FastAPI · Canvas API
+**Inspiration:** Traditional Go (囲碁) with modern web interactivity
+
+
