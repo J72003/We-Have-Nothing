@@ -25,6 +25,9 @@ class FutureGoGame {
   private mode: "PVP" | "PVE" | "AIAI" = "PVP";
   private player1Name: string = "Player 1";
   private player2Name: string = "Player 2";
+  private socket: WebSocket | null = null;
+  private roomId: string | null = null;
+
 
   constructor() {
     this.canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
@@ -40,6 +43,27 @@ class FutureGoGame {
     this.updateUI();
     getLeaderboard();
   }
+
+
+  public connectToRoom(roomId: string) {
+  this.roomId = roomId;
+  this.socket = new WebSocket(`ws://127.0.0.1:8010/ws/${roomId}`);
+
+  this.socket.onopen = () => {
+    console.log(`Connected to room: ${roomId}`);
+  };
+
+  this.socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === "move") {
+      console.log("Received move:", data);
+      this.placeStone(data.row, data.col); // Mirror the other player's move
+    }
+  };
+
+  this.socket.onclose = () => console.log("Disconnected from room");
+}
+
 
   private createInitialState(): GameState {
     return {
@@ -73,6 +97,14 @@ class FutureGoGame {
       this.mode = "AIAI";
       this.startDemo();
     });
+    document.getElementById("joinRoom")?.addEventListener("click", () => {
+      const input = document.getElementById("roomId") as HTMLInputElement;
+      if (input?.value) {
+        this.connectToRoom(input.value);
+        alert(`Joined room: ${input.value}`);
+      }
+    });
+
 
     document.getElementById("newGame")?.addEventListener("click", () => this.newGame());
     document.getElementById("pass")?.addEventListener("click", () => this.pass());
@@ -111,6 +143,17 @@ class FutureGoGame {
 
     this.updateScores();
     this.checkGameOver();
+    if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      this.socket.send(
+        JSON.stringify({
+          type: "move",
+          row,
+          col,
+          color: this.gameState.currentPlayer,
+        })
+      );
+    }
+
     this.switchPlayer();
     this.updateUI();
   }
