@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from sqlite3 import connect, IntegrityError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import WebSocket, WebSocketDisconnect 
+from typing import Dict, List
 
 # === App setup ===
 app = FastAPI(title="Go Game Backend Demo")
@@ -145,3 +147,28 @@ def leaderboard():
     results = [{"name": row[0], "wins": row[1]} for row in cur.fetchall()]
     conn.close()
     return results
+
+
+#This the websocket 
+rooms: Dict[str, List[WebSocket]] = {}
+
+@app.websocket("/ws/{room_id}")
+async def websocket_endpoint(websocket: WebSocket, room_id: str):
+    """Handle multiplayer rooms."""
+    await websocket.accept()
+
+    if room_id not in rooms:
+        rooms[room_id] = []
+    rooms[room_id].append(websocket)
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            # Broadcast to all clients in same room except sender
+            for conn in rooms[room_id]:
+                if conn != websocket:
+                    await conn.send_json(data)
+    except WebSocketDisconnect:
+        rooms[room_id].remove(websocket)
+        if not rooms[room_id]:
+            del rooms[room_id]
