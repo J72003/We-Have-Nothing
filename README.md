@@ -31,39 +31,23 @@ An interactive **Go (囲碁)** web game built with **TypeScript**, featuring:
 
 ## 🎮 Features
 
-### ⚔️ Game Modes
+Human vs Human (Local PVP)
 
-* **PVP:** Local multiplayer, two human players alternate turns.
-* **Human vs AI (Black):** You play as Black, AI plays White.
-* **Human vs AI (White):** You play as White, AI starts as Black.
-* **AI vs AI Demo:** Watch two AIs play automatically in real time.
+Human vs AI (Random AI logic)
 
-### 📊 Live Scoreboard
+AI vs AI Demo Mode
 
-Displays:
+Online Multiplayer (via WebSockets)
 
-* Captured stones
-* Territory ownership (auto-calculated)
-* Total score (stones + territory)
+Live Leaderboard (FastAPI + SQLite backend)
 
-### 🧠 AI Opponent
+Smooth UI built with Canvas and CSS
 
-* Basic random-move AI logic (expandable for heuristic or ML-based moves)
-* Automatic handling of turn order and pass logic
+Deployed live:
 
-### 🏆 Leaderboard
+Frontend: https://we-have-nothing.netlify.app
 
-* Full backend-integrated leaderboard that logs player names and win counts
-* Click **“View Full Leaderboard”** to open a modal view of all recorded players
-* Automatically filters out test and default entries
-
-### 🪶 Smooth UI
-
-* Canvas-based Go board with animated updates
-* Simple control panel for name entry and mode switching
-* Responsive design, styled with custom CSS
-
----
+Backend: https://we-have-nothing.onrender.com
 
 ## 🧩 Project Structure
 
