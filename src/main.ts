@@ -9,6 +9,7 @@ interface GameState {
   moveCount: number;
   consecutivePasses: number;
   territoryMap: (null | "black" | "white" | "neutral")[][];
+  captureAnimations: Array<{ row: number; col: number; startTime: number }>;
 }
 
 // ======================= Game Class =======================
@@ -80,6 +81,7 @@ class FutureGoGame {
       territoryMap: Array(this.BOARD_SIZE)
         .fill(null)
         .map(() => Array(this.BOARD_SIZE).fill(null)),
+      captureAnimations: [],
     };
   }
 
@@ -212,10 +214,15 @@ class FutureGoGame {
       }
     }
 
-    for (const [r, c] of toCapture) this.gameState.board[r][c] = null;
     const count = toCapture.length;
-    if (count > 0)
+    if (count > 0) {
+      const now = performance.now();
+      for (const [r, c] of toCapture) {
+        this.gameState.board[r][c] = null;
+        this.gameState.captureAnimations.push({ row: r, col: c, startTime: now });
+      }
       this.gameState.capturedStones[this.gameState.currentPlayer] += count;
+    }
   }
 
   private pass() {
@@ -459,6 +466,9 @@ ${winnerText}
   }
 
   private drawStones() {
+    const now = performance.now();
+    const animationDuration = 300;
+
     for (let row = 0; row < this.BOARD_SIZE; row++) {
       for (let col = 0; col < this.BOARD_SIZE; col++) {
         const stone = this.gameState.board[row][col];
@@ -471,6 +481,30 @@ ${winnerText}
         this.ctx.fill();
       }
     }
+
+    this.gameState.captureAnimations = this.gameState.captureAnimations.filter((anim) => {
+      const elapsed = now - anim.startTime;
+      if (elapsed > animationDuration) return false;
+
+      const progress = elapsed / animationDuration;
+      const x = (anim.col + 0.5) * this.CELL_SIZE;
+      const y = (anim.row + 0.5) * this.CELL_SIZE;
+      const alpha = 1 - progress;
+      const radius = this.STONE_RADIUS * (1 + progress * 0.5);
+
+      const stoneColor = this.gameState.board[anim.row]?.[anim.col] === "black" ? "#000" : "#fff";
+      const capturedByBlack = this.gameState.capturedStones.black > this.gameState.capturedStones.white;
+      const captureColor = capturedByBlack ? "#000" : "#fff";
+
+      this.ctx.globalAlpha = alpha;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, radius, 0, 2 * Math.PI);
+      this.ctx.fillStyle = captureColor;
+      this.ctx.fill();
+      this.ctx.globalAlpha = 1.0;
+
+      return true;
+    });
   }
 
    // ======================= UI Update =======================
