@@ -261,6 +261,7 @@ class FutureGoGame {
     this.gameState.gamePhase = "demo";
     this.demoInterval = window.setInterval(() => {
       this.aiMove();
+      this.updateScores();
       if (this.gameState.moveCount >= 150) this.stopDemo();
     }, 100);
   }
