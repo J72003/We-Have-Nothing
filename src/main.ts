@@ -99,15 +99,6 @@ class FutureGoGame {
       this.mode = "AIAI";
       this.startDemo();
     });
-    document.getElementById("joinRoom")?.addEventListener("click", () => {
-      const input = document.getElementById("roomId") as HTMLInputElement;
-      if (input?.value) {
-        this.connectToRoom(input.value);
-        alert(`Joined room: ${input.value}`);
-      }
-    });
-
-
     document.getElementById("newGame")?.addEventListener("click", () => this.newGame());
     document.getElementById("pass")?.addEventListener("click", () => this.pass());
     document.getElementById("stopDemo")?.addEventListener("click", () => this.stopDemo());
