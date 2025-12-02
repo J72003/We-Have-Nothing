@@ -399,10 +399,6 @@ ${winnerText}
 
   // ======================= Utility =======================
   private newGame() {
-    const p1Input = document.getElementById("player1Name") as HTMLInputElement;
-    const p2Input = document.getElementById("player2Name") as HTMLInputElement;
-    this.player1Name = p1Input?.value || "Player 1";
-    this.player2Name = p2Input?.value || "Player 2";
     this.gameState = this.createInitialState();
     this.updateUI();
   }
