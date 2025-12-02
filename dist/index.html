@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Go Game - 囲碁</title>
+
+  <style>
+    /* Player name section */
+    .player-setup {
+      margin-bottom: 15px;
+      background: #f9f9f9;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    .player-setup h3 {
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .player-inputs {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .player-inputs label {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .player-inputs input {
+      padding: 5px 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    /* Leaderboard styling */
+    .leaderboard-box {
+      margin-top: 15px;
+      background: #f4f2ee;
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .leaderboard-box h3 {
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .leaderboard-box table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .leaderboard-box th, .leaderboard-box td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #ccc;
+      text-align: left;
+    }
+    .leaderboard-box th {
+      background: #e2d7c2;
+      font-weight: bold;
+    }
+  </style>
+  <script type="module" crossorigin src="/assets/index-C34_SYkf.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DRTw6D-o.css">
+</head>
+
+<body>
+  <div class="game-container">
+    <div class="board-container">
+      <div class="game-title">
+        <h1>Go</h1>
+        <div class="japanese">囲碁</div>
+      </div>
+      <canvas id="gameCanvas"></canvas>
+    </div>
+    
+    <div class="game-info">
+      <!-- Player naming area -->
+      <div class="player-setup">
+        <h3>Players</h3>
+        <div class="player-inputs">
+          <label for="blackName">Black Player:</label>
+          <input id="blackName" type="text" placeholder="e.g. Alice" value="BlackAI">
+          <label for="whiteName">White Player:</label>
+          <input id="whiteName" type="text" placeholder="e.g. Bob" value="WhiteAI">
+        </div>
+      </div>
+
+      <div class="current-turn">
+        <h3>Current Turn</h3>
+        <div id="currentPlayer" class="current-player black">Black</div>
+      </div>
+      
+      <div class="score-section">
+        <h3>Live Scoreboard</h3>
+        <div class="scores">
+          <div class="score-category">
+            <h4>Captured Stones</h4>
+            <div class="score-row">
+              <span class="label">Black:</span>
+              <span id="blackCaptured" class="value">0</span>
+            </div>
+            <div class="score-row">
+              <span class="label">White:</span>
+              <span id="whiteCaptured" class="value">0</span>
+            </div>
+          </div>
+          
+          <div class="score-category">
+            <h4>Territory</h4>
+            <div class="score-row">
+              <span class="label">Black:</span>
+              <span id="blackTerritory" class="value">0</span>
+            </div>
+            <div class="score-row">
+              <span class="label">White:</span>
+              <span id="whiteTerritory" class="value">0</span>
+            </div>
+          </div>
+          
+          <div class="score-category total">
+            <h4>Total Score</h4>
+            <div class="score-row">
+              <span class="label">Black:</span>
+              <span id="blackTotal" class="value total-score">0</span>
+            </div>
+            <div class="score-row">
+              <span class="label">White:</span>
+              <span id="whiteTotal" class="value total-score">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Leaderboard Added Here -->
+        <div id="leaderboard" class="leaderboard-box">
+          <h3>🏆 Leaderboard</h3>
+          <table>
+            <tr><th>Player</th><th>Wins</th></tr>
+          </table>
+        </div>
+      </div>
+      
+      <div class="game-stats">
+        <h3>Game Stats</h3>
+        <div class="stat-item">
+          <span class="label">Moves:</span>
+          <span id="moveCount" class="value">0</span>
+        </div>
+        <div id="gameStatus" class="game-status playing">Manual Play Mode</div>
+      </div>
+
+      <div class="mode-buttons">
+        <button id="pvpMode" class="btn btn-primary">Player vs Player</button>
+        <button id="pveMode" class="btn btn-secondary">Player vs AI</button>
+        <button id="aiMode" class="btn btn-demo">AI vs AI Demo</button>
+      </div>
+
+      <div class="controls">
+        <button id="startDemo" class="btn btn-demo">Start Demo</button>
+        <button id="stopDemo" class="btn btn-demo">Stop Demo</button>
+        <button id="pass" class="btn btn-secondary">Pass</button>
+        <button id="newGame" class="btn btn-primary">New Game</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
