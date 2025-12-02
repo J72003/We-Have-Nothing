@@ -10,6 +10,8 @@ interface GameState {
   consecutivePasses: number;
   territoryMap: (null | "black" | "white" | "neutral")[][];
   captureAnimations: Array<{ row: number; col: number; startTime: number }>;
+  lastBoardState: string | null;
+  koPoint: { row: number; col: number } | null;
 }
 
 // ======================= Game Class =======================
@@ -82,6 +84,8 @@ class FutureGoGame {
         .fill(null)
         .map(() => Array(this.BOARD_SIZE).fill(null)),
       captureAnimations: [],
+      lastBoardState: null,
+      koPoint: null,
     };
   }
 
@@ -127,9 +131,30 @@ class FutureGoGame {
   // ======================= Core Gameplay =======================
   private placeStone(row: number, col: number) {
     if (!this.isValidPosition(row, col) || this.gameState.board[row][col] !== null) return;
-    this.gameState.board[row][col] = this.gameState.currentPlayer;
 
-    this.handleCaptures(row, col);
+    if (this.gameState.koPoint && this.gameState.koPoint.row === row && this.gameState.koPoint.col === col) {
+      return;
+    }
+
+    const boardSnapshot = JSON.stringify(this.gameState.board);
+
+    this.gameState.board[row][col] = this.gameState.currentPlayer;
+    const capturedCount = this.handleCaptures(row, col);
+
+    if (!this.hasLibertyCheck(row, col)) {
+      this.gameState.board[row][col] = null;
+      return;
+    }
+
+    const newBoardState = JSON.stringify(this.gameState.board);
+    if (capturedCount === 1 && newBoardState === this.gameState.lastBoardState) {
+      this.gameState.board[row][col] = null;
+      return;
+    }
+
+    this.gameState.lastBoardState = boardSnapshot;
+    this.gameState.koPoint = null;
+
     this.playSound(600);
     this.gameState.moveCount++;
     this.gameState.consecutivePasses = 0;
@@ -151,8 +176,32 @@ class FutureGoGame {
     this.updateUI();
   }
 
+  private hasLibertyCheck(row: number, col: number): boolean {
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const visited = new Set<string>();
+    const color = this.gameState.board[row][col];
+
+    const check = (r: number, c: number): boolean => {
+      if (!this.isValidPosition(r, c)) return false;
+      const key = `${r},${c}`;
+      if (visited.has(key)) return false;
+      visited.add(key);
+
+      const stone = this.gameState.board[r][c];
+      if (stone === null) return true;
+      if (stone !== color) return false;
+
+      for (const [dr, dc] of dirs) {
+        if (check(r + dr, c + dc)) return true;
+      }
+      return false;
+    };
+
+    return check(row, col);
+  }
+
   // ✅ Capture Detection
-  private handleCaptures(row: number, col: number) {
+  private handleCaptures(row: number, col: number): number {
     const opponent = this.gameState.currentPlayer === "black" ? "white" : "black";
     const dirs = [
       [1, 0],
@@ -214,6 +263,7 @@ class FutureGoGame {
       }
       this.gameState.capturedStones[this.gameState.currentPlayer] += count;
     }
+    return count;
   }
 
   private pass() {
@@ -239,11 +289,57 @@ class FutureGoGame {
       }
     }
     if (emptyPositions.length === 0) {
-      this.endGame("Board full");
+      this.pass();
       return;
     }
-    const [row, col] = emptyPositions[Math.floor(Math.random() * emptyPositions.length)];
-    this.placeStone(row, col);
+
+    let bestMove: [number, number] | null = null;
+    let bestScore = -Infinity;
+
+    for (const [row, col] of emptyPositions) {
+      const score = this.evaluateMove(row, col);
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = [row, col];
+      }
+    }
+
+    if (bestMove) {
+      const [row, col] = bestMove;
+      this.placeStone(row, col);
+    } else {
+      this.pass();
+    }
+  }
+
+  private evaluateMove(row: number, col: number): number {
+    let score = 0;
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+    for (const [dr, dc] of dirs) {
+      const nr = row + dr;
+      const nc = col + dc;
+      if (this.isValidPosition(nr, nc)) {
+        const stone = this.gameState.board[nr][nc];
+        if (stone === this.gameState.currentPlayer) {
+          score += 2;
+        } else if (stone !== null) {
+          score += 1;
+        }
+      }
+    }
+
+    const edgeBonus =
+      (row === 0 || row === this.BOARD_SIZE - 1 ||
+       col === 0 || col === this.BOARD_SIZE - 1) ? -3 : 0;
+    const centerBonus =
+      (Math.abs(row - this.BOARD_SIZE / 2) < 3 &&
+       Math.abs(col - this.BOARD_SIZE / 2) < 3) ? 5 : 0;
+
+    score += edgeBonus + centerBonus;
+    score += Math.random() * 2;
+
+    return score;
   }
 
   private startDemo() {
