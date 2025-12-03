@@ -105,6 +105,7 @@ class FutureGoGame {
     });
     document.getElementById("newGame")?.addEventListener("click", () => this.newGame());
     document.getElementById("pass")?.addEventListener("click", () => this.pass());
+    document.getElementById("startDemo")?.addEventListener("click", () => this.startDemo());
     document.getElementById("stopDemo")?.addEventListener("click", () => this.stopDemo());
     document
       .getElementById("viewFullLeaderboard")
@@ -372,12 +373,19 @@ class FutureGoGame {
   private startDemo() {
     if (this.demoInterval) return;
     this.mode = "AIAI";
+    this.gameState = this.createInitialState();
     this.gameState.gamePhase = "demo";
+    const gameOverDisplay = document.getElementById("gameOverDisplay");
+    if (gameOverDisplay) gameOverDisplay.style.display = "none";
     this.demoInterval = window.setInterval(() => {
-      this.aiMove();
-      this.updateScores();
-      this.updateUI();
-      if (this.gameState.moveCount >= 150) this.stopDemo();
+      if (this.gameState.gamePhase === "demo") {
+        this.aiMove();
+        this.updateScores();
+        this.updateUI();
+      }
+      if (this.gameState.moveCount >= 150 || this.gameState.gamePhase === "finished") {
+        this.stopDemo();
+      }
     }, 100);
   }
 
