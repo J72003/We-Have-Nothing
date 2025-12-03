@@ -112,6 +112,7 @@ class FutureGoGame {
 
     this.canvas.addEventListener("click", (e) => {
       if (this.mode === "AIAI" || this.gameState.gamePhase !== "playing") return;
+      if (this.mode === "PVE" && this.gameState.currentPlayer === "white") return;
 
       const rect = this.canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -121,15 +122,13 @@ class FutureGoGame {
 
       if (this.isValidPosition(row, col)) {
         this.placeStone(row, col);
-        if (this.mode === "PVE" && this.gameState.currentPlayer === "white") {
-          setTimeout(() => this.aiMove(), 150);
-        }
       }
     });
   }
 
   // ======================= Core Gameplay =======================
   private placeStone(row: number, col: number) {
+    if (this.gameState.gamePhase !== "playing" && this.gameState.gamePhase !== "demo") return;
     if (!this.isValidPosition(row, col) || this.gameState.board[row][col] !== null) return;
 
     if (this.gameState.koPoint && this.gameState.koPoint.row === row && this.gameState.koPoint.col === col) {
@@ -174,6 +173,10 @@ class FutureGoGame {
 
     this.switchPlayer();
     this.updateUI();
+
+    if (this.mode === "PVE" && this.gameState.currentPlayer === "white" && this.gameState.gamePhase === "playing") {
+      setTimeout(() => this.aiMove(), 300);
+    }
   }
 
   private hasLibertyCheck(row: number, col: number): boolean {
@@ -267,6 +270,8 @@ class FutureGoGame {
   }
 
   private pass() {
+    if (this.gameState.gamePhase !== "playing") return;
+
     this.gameState.consecutivePasses++;
     this.switchPlayer();
     this.updateUI();
@@ -276,16 +281,22 @@ class FutureGoGame {
       return;
     }
 
-    if (this.mode === "PVE" && this.gameState.currentPlayer === "white") {
-      setTimeout(() => this.aiMove(), 150);
+    if (this.mode === "PVE" && this.gameState.currentPlayer === "white" && this.gameState.gamePhase === "playing") {
+      setTimeout(() => this.aiMove(), 300);
     }
   }
 
   private aiMove() {
+    if (this.gameState.gamePhase !== "playing" && this.gameState.gamePhase !== "demo") return;
+
     const emptyPositions: [number, number][] = [];
     for (let r = 0; r < this.BOARD_SIZE; r++) {
       for (let c = 0; c < this.BOARD_SIZE; c++) {
-        if (this.gameState.board[r][c] === null) emptyPositions.push([r, c]);
+        if (this.gameState.board[r][c] === null) {
+          if (this.canPlaceStone(r, c)) {
+            emptyPositions.push([r, c]);
+          }
+        }
       }
     }
     if (emptyPositions.length === 0) {
@@ -310,6 +321,22 @@ class FutureGoGame {
     } else {
       this.pass();
     }
+  }
+
+  private canPlaceStone(row: number, col: number): boolean {
+    if (!this.isValidPosition(row, col) || this.gameState.board[row][col] !== null) return false;
+    if (this.gameState.koPoint && this.gameState.koPoint.row === row && this.gameState.koPoint.col === col) return false;
+
+    const originalBoard = this.gameState.board.map(r => [...r]);
+    const currentPlayer = this.gameState.currentPlayer;
+
+    this.gameState.board[row][col] = currentPlayer;
+    this.handleCaptures(row, col);
+    const hasLiberty = this.hasLibertyCheck(row, col);
+
+    this.gameState.board = originalBoard;
+
+    return hasLiberty;
   }
 
   private evaluateMove(row: number, col: number): number {
@@ -379,21 +406,26 @@ class FutureGoGame {
       winnerText = `🏆 ${this.player2Name} (White) wins!`;
     else winnerText = "🤝 It's a draw!";
 
-    alert(`
-🎮 Game Over: ${reason}
-──────────────────────────
-⚫ ${this.player1Name} (Black)
-Stones: ${blackStones}
-Territory: ${blackTerritory}
-Total: ${blackTotal}
+    const gameOverDisplay = document.getElementById("gameOverDisplay");
+    const gameOverReason = document.getElementById("gameOverReason");
+    const gameOverScores = document.getElementById("gameOverScores");
+    const gameOverWinner = document.getElementById("gameOverWinner");
 
-⚪ ${this.player2Name} (White)
-Stones: ${whiteStones}
-Territory: ${whiteTerritory}
-Total: ${whiteTotal}
-
-${winnerText}
-`);
+    if (gameOverDisplay) gameOverDisplay.style.display = "block";
+    if (gameOverReason) gameOverReason.textContent = reason;
+    if (gameOverScores) {
+      gameOverScores.innerHTML = `
+        <div style="margin-bottom: 8px;">
+          <strong>⚫ ${this.player1Name} (Black)</strong><br>
+          Stones: ${blackStones} | Territory: ${blackTerritory} | Total: ${blackTotal}
+        </div>
+        <div>
+          <strong>⚪ ${this.player2Name} (White)</strong><br>
+          Stones: ${whiteStones} | Territory: ${whiteTerritory} | Total: ${whiteTotal}
+        </div>
+      `;
+    }
+    if (gameOverWinner) gameOverWinner.textContent = winnerText;
 
     const p1 = this.mode === "AIAI" ? "BlackAI" : this.player1Name;
     const p2 = this.mode === "AIAI" ? "WhiteAI" : this.player2Name;
@@ -487,6 +519,8 @@ ${winnerText}
   // ======================= Utility =======================
   private newGame() {
     this.gameState = this.createInitialState();
+    const gameOverDisplay = document.getElementById("gameOverDisplay");
+    if (gameOverDisplay) gameOverDisplay.style.display = "none";
     this.updateUI();
   }
 
