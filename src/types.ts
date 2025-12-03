@@ -35,7 +35,5 @@ export interface Achievement {
   unlockedAt?: number;
 }
 
-export type BoardSize = 9 | 13 | 19;
-export type AIDifficulty = "easy" | "medium" | "hard";
 export type GameMode = "PVP" | "PVE" | "AIAI";
 export type BoardTheme = "classic" | "modern" | "dark" | "bamboo";

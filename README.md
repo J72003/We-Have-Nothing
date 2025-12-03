@@ -142,8 +142,7 @@ Then open the local server (usually `http://localhost:5173`) to play.
 ## ✨ NEW FEATURES (2025 Update)
 
 ### Gameplay Enhancements
-* **Board Size Selection**: Choose between 9x9 (Quick), 13x13 (Medium), or 19x19 (Standard) boards
-* **AI Difficulty Levels**: Easy, Medium, and Hard AI opponents with different strategies
+* **Standard 19x19 Board**: Traditional full-size Go board
 * **Move History & Undo**: Full move history tracking with ability to undo moves
 * **Hover Preview**: See a preview of your stone before placing it
 * **Last Move Highlight**: Visual indicator of the most recent move

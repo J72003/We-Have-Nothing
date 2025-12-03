@@ -1,6 +1,5 @@
-import { GameState, MoveRecord, BoardSize, AIDifficulty, GameMode, BoardTheme } from './types';
+import { GameState, MoveRecord, GameMode, BoardTheme } from './types';
 import { achievementSystem } from './achievements';
-import { AIEngine } from './ai-engine';
 import { themeManager, THEMES } from './themes';
 
 // ======================= Game Class =======================
@@ -8,15 +7,13 @@ class FutureGoGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private gameState: GameState;
-  private BOARD_SIZE: BoardSize = 19;
-  private CELL_SIZE = 30;
-  private STONE_RADIUS = 12;
+  private readonly BOARD_SIZE = 19;
+  private readonly CELL_SIZE = 30;
+  private readonly STONE_RADIUS = 12;
   private animationFrame: number | null = null;
   private audioCtx: AudioContext;
   private demoInterval: number | null = null;
   private mode: GameMode = "PVP";
-  private aiDifficulty: AIDifficulty = "medium";
-  private aiEngine: AIEngine;
   private hoverPosition: { row: number; col: number } | null = null;
   private replayMode = false;
   private replayIndex = 0;
@@ -31,8 +28,9 @@ class FutureGoGame {
   constructor() {
     this.canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
     this.ctx = this.canvas.getContext("2d")!;
-    this.aiEngine = new AIEngine(this.BOARD_SIZE, this.aiDifficulty);
-    this.resizeCanvas();
+    const canvasSize = this.CELL_SIZE * (this.BOARD_SIZE + 1);
+    this.canvas.width = canvasSize;
+    this.canvas.height = canvasSize;
     this.audioCtx = new AudioContext();
     this.gameState = this.createInitialState();
 
@@ -42,12 +40,6 @@ class FutureGoGame {
     this.updateUI();
     this.loadGameStats();
     getLeaderboard();
-  }
-
-  private resizeCanvas() {
-    const canvasSize = this.CELL_SIZE * (this.BOARD_SIZE + 1);
-    this.canvas.width = canvasSize;
-    this.canvas.height = canvasSize;
   }
 
 
@@ -122,20 +114,6 @@ class FutureGoGame {
     document
       .getElementById("viewFullLeaderboard")
       ?.addEventListener("click", () => showFullLeaderboardModal());
-
-    const boardSizeSelector = document.getElementById("boardSize") as HTMLSelectElement;
-    boardSizeSelector?.addEventListener("change", (e) => {
-      this.BOARD_SIZE = parseInt((e.target as HTMLSelectElement).value) as BoardSize;
-      this.aiEngine = new AIEngine(this.BOARD_SIZE, this.aiDifficulty);
-      this.resizeCanvas();
-      this.newGame();
-    });
-
-    const difficultySelector = document.getElementById("aiDifficulty") as HTMLSelectElement;
-    difficultySelector?.addEventListener("change", (e) => {
-      this.aiDifficulty = (e.target as HTMLSelectElement).value as AIDifficulty;
-      this.aiEngine.setDifficulty(this.aiDifficulty);
-    });
 
     const themeSelector = document.getElementById("boardTheme") as HTMLSelectElement;
     themeSelector?.addEventListener("change", (e) => {
@@ -256,7 +234,7 @@ class FutureGoGame {
     this.updateUI();
 
     if (this.mode === "PVE" && this.gameState.currentPlayer === "white" && this.gameState.gamePhase === "playing") {
-      setTimeout(() => this.aiMove(), this.aiEngine.getThinkingTime());
+      setTimeout(() => this.aiMove(), 300);
     }
   }
 
@@ -304,7 +282,7 @@ class FutureGoGame {
     let bestScore = -Infinity;
 
     for (const [row, col] of emptyPositions) {
-      const score = this.aiEngine.evaluateMove(row, col, this.gameState.board, this.gameState.currentPlayer);
+      const score = this.evaluateMove(row, col);
       if (score > bestScore) {
         bestScore = score;
         bestMove = [row, col];
@@ -314,6 +292,36 @@ class FutureGoGame {
     if (bestMove) {
       this.highlightHint(bestMove[0], bestMove[1]);
     }
+  }
+
+  private evaluateMove(row: number, col: number): number {
+    let score = 0;
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+    for (const [dr, dc] of dirs) {
+      const nr = row + dr;
+      const nc = col + dc;
+      if (this.isValidPosition(nr, nc)) {
+        const stone = this.gameState.board[nr][nc];
+        if (stone === this.gameState.currentPlayer) {
+          score += 2;
+        } else if (stone !== null) {
+          score += 1;
+        }
+      }
+    }
+
+    const edgeBonus =
+      (row === 0 || row === this.BOARD_SIZE - 1 ||
+       col === 0 || col === this.BOARD_SIZE - 1) ? -3 : 0;
+    const centerBonus =
+      (Math.abs(row - this.BOARD_SIZE / 2) < 3 &&
+       Math.abs(col - this.BOARD_SIZE / 2) < 3) ? 5 : 0;
+
+    score += edgeBonus + centerBonus;
+    score += Math.random() * 2;
+
+    return score;
   }
 
   private highlightHint(row: number, col: number) {
@@ -455,7 +463,7 @@ class FutureGoGame {
     }
 
     if (this.mode === "PVE" && this.gameState.currentPlayer === "white" && this.gameState.gamePhase === "playing") {
-      setTimeout(() => this.aiMove(), this.aiEngine.getThinkingTime());
+      setTimeout(() => this.aiMove(), 300);
     }
   }
 
@@ -645,7 +653,7 @@ class FutureGoGame {
     let bestScore = -Infinity;
 
     for (const [row, col] of emptyPositions) {
-      const score = this.aiEngine.evaluateMove(row, col, this.gameState.board, this.gameState.currentPlayer);
+      const score = this.evaluateMove(row, col);
       if (score > bestScore) {
         bestScore = score;
         bestMove = [row, col];
