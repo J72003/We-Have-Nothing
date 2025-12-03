@@ -139,13 +139,49 @@ Then open the local server (usually `http://localhost:5173`) to play.
 
 ---
 
-## 🧑‍💻 Future Improvements
+## ✨ NEW FEATURES (2025 Update)
 
-* Smarter AI using Minimax or Monte Carlo Tree Search
-* Online multiplayer with WebSocket support
-* Undo/Redo system
-* Board size options (9×9, 13×13, 19×19)
-* Persistent leaderboard and game history visualization
+### Gameplay Enhancements
+* **Board Size Selection**: Choose between 9x9 (Quick), 13x13 (Medium), or 19x19 (Standard) boards
+* **AI Difficulty Levels**: Easy, Medium, and Hard AI opponents with different strategies
+* **Move History & Undo**: Full move history tracking with ability to undo moves
+* **Hover Preview**: See a preview of your stone before placing it
+* **Last Move Highlight**: Visual indicator of the most recent move
+* **Territory Preview Toggle**: View territory calculations during gameplay
+* **Hint System**: Get AI suggestions for your next move
+* **Game Replay**: Review completed games move-by-move
+
+### Visual & Polish
+* **Multiple Board Themes**:
+  - Classic Wood (traditional)
+  - Modern Blue (contemporary)
+  - Dark Mode (night-friendly)
+  - Bamboo Forest (nature-inspired)
+* **Improved Stone Animations**: Smooth placement with realistic gradients
+* **Star Points**: Traditional board markers for all board sizes
+* **Enhanced Capture Effects**: Better visual feedback for captured stones
+
+### Achievement System
+* **12 Unique Achievements**: Track your progress and milestones
+  - First Stone, First Blood, Territory Master
+  - Combo Master, Speed Demon, Patient Player
+  - Corner King, Perfect Victory, Comeback Kid
+  - Getting Started, Veteran Player, Go Master
+* **Achievement Notifications**: Beautiful pop-up notifications when unlocking achievements
+* **Progress Tracking**: View all achievements and your completion percentage
+
+### Game Features
+* **Chess Clock Timer**: Optional 10-minute timer for each player
+* **Game Statistics**: Track moves, history, and time remaining
+* **Persistent Progress**: Achievements and stats saved locally
+
+### Future Improvements
+* Smarter AI using Monte Carlo Tree Search
+* Daily challenges and puzzles
+* Online multiplayer rankings
+* Share game replays via URL
+* Tutorial mode for beginners
+* More board themes and customization
 
 ---
 

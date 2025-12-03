@@ -1,31 +1,27 @@
-// ======================= Interfaces =======================
-interface GameState {
-  board: (null | "black" | "white")[][];
-  currentPlayer: "black" | "white";
-  capturedStones: { black: number; white: number };
-  territoryScore: { black: number; white: number };
-  totalScore: { black: number; white: number };
-  gamePhase: "playing" | "demo" | "finished";
-  moveCount: number;
-  consecutivePasses: number;
-  territoryMap: (null | "black" | "white" | "neutral")[][];
-  captureAnimations: Array<{ row: number; col: number; startTime: number }>;
-  lastBoardState: string | null;
-  koPoint: { row: number; col: number } | null;
-}
+import { GameState, MoveRecord, BoardSize, AIDifficulty, GameMode, BoardTheme } from './types';
+import { achievementSystem } from './achievements';
+import { AIEngine } from './ai-engine';
+import { themeManager, THEMES } from './themes';
 
 // ======================= Game Class =======================
 class FutureGoGame {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private gameState: GameState;
-  private readonly BOARD_SIZE = 19;
-  private readonly CELL_SIZE = 30;
-  private readonly STONE_RADIUS = 12;
+  private BOARD_SIZE: BoardSize = 19;
+  private CELL_SIZE = 30;
+  private STONE_RADIUS = 12;
   private animationFrame: number | null = null;
   private audioCtx: AudioContext;
   private demoInterval: number | null = null;
-  private mode: "PVP" | "PVE" | "AIAI" = "PVP";
+  private mode: GameMode = "PVP";
+  private aiDifficulty: AIDifficulty = "medium";
+  private aiEngine: AIEngine;
+  private hoverPosition: { row: number; col: number } | null = null;
+  private replayMode = false;
+  private replayIndex = 0;
+  private timerInterval: number | null = null;
+  private gamesPlayed = 0;
   private player1Name: string = "Player 1";
   private player2Name: string = "Player 2";
   private socket: WebSocket | null = null;
@@ -35,16 +31,23 @@ class FutureGoGame {
   constructor() {
     this.canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
     this.ctx = this.canvas.getContext("2d")!;
-    const canvasSize = this.CELL_SIZE * (this.BOARD_SIZE + 1);
-    this.canvas.width = canvasSize;
-    this.canvas.height = canvasSize;
+    this.aiEngine = new AIEngine(this.BOARD_SIZE, this.aiDifficulty);
+    this.resizeCanvas();
     this.audioCtx = new AudioContext();
     this.gameState = this.createInitialState();
 
+    themeManager.loadSavedTheme();
     this.setupEventListeners();
     this.animate();
     this.updateUI();
+    this.loadGameStats();
     getLeaderboard();
+  }
+
+  private resizeCanvas() {
+    const canvasSize = this.CELL_SIZE * (this.BOARD_SIZE + 1);
+    this.canvas.width = canvasSize;
+    this.canvas.height = canvasSize;
   }
 
 
@@ -86,6 +89,10 @@ class FutureGoGame {
       captureAnimations: [],
       lastBoardState: null,
       koPoint: null,
+      lastMove: null,
+      moveHistory: [],
+      timeControl: { black: 600000, white: 600000 },
+      showTerritoryPreview: false
     };
   }
 
@@ -107,12 +114,73 @@ class FutureGoGame {
     document.getElementById("pass")?.addEventListener("click", () => this.pass());
     document.getElementById("startDemo")?.addEventListener("click", () => this.startDemo());
     document.getElementById("stopDemo")?.addEventListener("click", () => this.stopDemo());
+    document.getElementById("undoMove")?.addEventListener("click", () => this.undoMove());
+    document.getElementById("showHint")?.addEventListener("click", () => this.showHint());
+    document.getElementById("toggleTerritory")?.addEventListener("click", () => this.toggleTerritoryPreview());
+    document.getElementById("replayGame")?.addEventListener("click", () => this.startReplay());
+    document.getElementById("viewAchievements")?.addEventListener("click", () => this.showAchievementsModal());
     document
       .getElementById("viewFullLeaderboard")
       ?.addEventListener("click", () => showFullLeaderboardModal());
 
+    const boardSizeSelector = document.getElementById("boardSize") as HTMLSelectElement;
+    boardSizeSelector?.addEventListener("change", (e) => {
+      this.BOARD_SIZE = parseInt((e.target as HTMLSelectElement).value) as BoardSize;
+      this.aiEngine = new AIEngine(this.BOARD_SIZE, this.aiDifficulty);
+      this.resizeCanvas();
+      this.newGame();
+    });
+
+    const difficultySelector = document.getElementById("aiDifficulty") as HTMLSelectElement;
+    difficultySelector?.addEventListener("change", (e) => {
+      this.aiDifficulty = (e.target as HTMLSelectElement).value as AIDifficulty;
+      this.aiEngine.setDifficulty(this.aiDifficulty);
+    });
+
+    const themeSelector = document.getElementById("boardTheme") as HTMLSelectElement;
+    themeSelector?.addEventListener("change", (e) => {
+      const theme = (e.target as HTMLSelectElement).value as BoardTheme;
+      themeManager.setTheme(theme);
+    });
+
+    const timerToggle = document.getElementById("enableTimer") as HTMLInputElement;
+    timerToggle?.addEventListener("change", (e) => {
+      if ((e.target as HTMLInputElement).checked) {
+        this.startTimer();
+      } else {
+        this.stopTimer();
+      }
+    });
+
+    this.canvas.addEventListener("mousemove", (e) => {
+      if (this.replayMode || this.mode === "AIAI" || this.gameState.gamePhase !== "playing") {
+        this.hoverPosition = null;
+        return;
+      }
+      if (this.mode === "PVE" && this.gameState.currentPlayer === "white") {
+        this.hoverPosition = null;
+        return;
+      }
+
+      const rect = this.canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const col = Math.round((x - this.CELL_SIZE / 2) / this.CELL_SIZE);
+      const row = Math.round((y - this.CELL_SIZE / 2) / this.CELL_SIZE);
+
+      if (this.isValidPosition(row, col) && this.gameState.board[row][col] === null) {
+        this.hoverPosition = { row, col };
+      } else {
+        this.hoverPosition = null;
+      }
+    });
+
+    this.canvas.addEventListener("mouseleave", () => {
+      this.hoverPosition = null;
+    });
+
     this.canvas.addEventListener("click", (e) => {
-      if (this.mode === "AIAI" || this.gameState.gamePhase !== "playing") return;
+      if (this.replayMode || this.mode === "AIAI" || this.gameState.gamePhase !== "playing") return;
       if (this.mode === "PVE" && this.gameState.currentPlayer === "white") return;
 
       const rect = this.canvas.getBoundingClientRect();
@@ -155,10 +223,22 @@ class FutureGoGame {
     this.gameState.lastBoardState = boardSnapshot;
     this.gameState.koPoint = null;
 
+    this.gameState.moveHistory.push({
+      row,
+      col,
+      player: this.gameState.currentPlayer,
+      timestamp: Date.now(),
+      boardState: boardSnapshot,
+      capturedStones: { ...this.gameState.capturedStones }
+    });
+
+    this.gameState.lastMove = { row, col };
+
     this.playSound(600);
     this.gameState.moveCount++;
     this.gameState.consecutivePasses = 0;
 
+    this.checkAchievements();
     this.updateScores();
     this.checkGameOver();
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
@@ -176,8 +256,100 @@ class FutureGoGame {
     this.updateUI();
 
     if (this.mode === "PVE" && this.gameState.currentPlayer === "white" && this.gameState.gamePhase === "playing") {
-      setTimeout(() => this.aiMove(), 300);
+      setTimeout(() => this.aiMove(), this.aiEngine.getThinkingTime());
     }
+  }
+
+  private undoMove() {
+    if (this.gameState.moveHistory.length === 0 || this.gameState.gamePhase !== "playing") return;
+    if (this.mode === "PVE" && this.gameState.currentPlayer === "white") return;
+
+    const lastMove = this.gameState.moveHistory.pop();
+    if (!lastMove) return;
+
+    if (this.mode === "PVE" && this.gameState.moveHistory.length > 0) {
+      this.gameState.moveHistory.pop();
+    }
+
+    if (this.gameState.moveHistory.length > 0) {
+      const prevMove = this.gameState.moveHistory[this.gameState.moveHistory.length - 1];
+      this.gameState.board = JSON.parse(prevMove.boardState);
+      this.gameState.capturedStones = { ...prevMove.capturedStones };
+      this.gameState.currentPlayer = prevMove.player === "black" ? "white" : "black";
+      this.gameState.lastMove = { row: prevMove.row, col: prevMove.col };
+    } else {
+      this.gameState = this.createInitialState();
+    }
+
+    this.gameState.moveCount = this.gameState.moveHistory.length;
+    this.updateScores();
+    this.updateUI();
+  }
+
+  private showHint() {
+    if (this.gameState.gamePhase !== "playing" || this.mode === "AIAI") return;
+
+    const emptyPositions: [number, number][] = [];
+    for (let r = 0; r < this.BOARD_SIZE; r++) {
+      for (let c = 0; c < this.BOARD_SIZE; c++) {
+        if (this.gameState.board[r][c] === null && this.canPlaceStone(r, c)) {
+          emptyPositions.push([r, c]);
+        }
+      }
+    }
+
+    if (emptyPositions.length === 0) return;
+
+    let bestMove: [number, number] | null = null;
+    let bestScore = -Infinity;
+
+    for (const [row, col] of emptyPositions) {
+      const score = this.aiEngine.evaluateMove(row, col, this.gameState.board, this.gameState.currentPlayer);
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = [row, col];
+      }
+    }
+
+    if (bestMove) {
+      this.highlightHint(bestMove[0], bestMove[1]);
+    }
+  }
+
+  private highlightHint(row: number, col: number) {
+    const x = (col + 0.5) * this.CELL_SIZE;
+    const y = (row + 0.5) * this.CELL_SIZE;
+    let alpha = 0.8;
+
+    const animate = () => {
+      alpha -= 0.02;
+      if (alpha > 0) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    const originalDraw = this.draw.bind(this);
+    this.draw = () => {
+      originalDraw();
+      if (alpha > 0) {
+        this.ctx.globalAlpha = alpha;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, this.STONE_RADIUS + 4, 0, 2 * Math.PI);
+        this.ctx.strokeStyle = '#FFD700';
+        this.ctx.lineWidth = 3;
+        this.ctx.stroke();
+        this.ctx.globalAlpha = 1.0;
+      } else {
+        this.draw = originalDraw;
+      }
+    };
+
+    animate();
+  }
+
+  private toggleTerritoryPreview() {
+    this.gameState.showTerritoryPreview = !this.gameState.showTerritoryPreview;
+    this.updateUI();
   }
 
   private hasLibertyCheck(row: number, col: number): boolean {
@@ -283,8 +455,172 @@ class FutureGoGame {
     }
 
     if (this.mode === "PVE" && this.gameState.currentPlayer === "white" && this.gameState.gamePhase === "playing") {
-      setTimeout(() => this.aiMove(), 300);
+      setTimeout(() => this.aiMove(), this.aiEngine.getThinkingTime());
     }
+  }
+
+  private startReplay() {
+    if (this.gameState.moveHistory.length === 0) {
+      alert('No moves to replay!');
+      return;
+    }
+
+    this.replayMode = true;
+    this.replayIndex = 0;
+    this.gameState = this.createInitialState();
+    this.gameState.gamePhase = "finished";
+
+    const replayInterval = setInterval(() => {
+      if (this.replayIndex >= this.gameState.moveHistory.length) {
+        clearInterval(replayInterval);
+        this.replayMode = false;
+        return;
+      }
+
+      const move = this.gameState.moveHistory[this.replayIndex];
+      this.gameState.board[move.row][move.col] = move.player;
+      this.gameState.lastMove = { row: move.row, col: move.col };
+      this.replayIndex++;
+      this.updateUI();
+    }, 500);
+  }
+
+  private startTimer() {
+    if (this.timerInterval) return;
+
+    const startTime = Date.now();
+    this.timerInterval = window.setInterval(() => {
+      if (this.gameState.gamePhase !== "playing") {
+        this.stopTimer();
+        return;
+      }
+
+      const elapsed = Date.now() - startTime;
+      const player = this.gameState.currentPlayer;
+
+      if (this.gameState.timeControl) {
+        this.gameState.timeControl[player] = Math.max(0, 600000 - elapsed);
+
+        if (this.gameState.timeControl[player] <= 0) {
+          this.endGame(`${player} ran out of time!`);
+        }
+
+        this.updateUI();
+      }
+    }, 100);
+  }
+
+  private stopTimer() {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+  }
+
+  private checkAchievements() {
+    if (this.gameState.moveCount === 1) {
+      achievementSystem.unlock('first-stone');
+    }
+
+    if (this.gameState.capturedStones.black + this.gameState.capturedStones.white > 0) {
+      achievementSystem.unlock('first-capture');
+    }
+
+    if (this.gameState.capturedStones[this.gameState.currentPlayer] >= 10) {
+      achievementSystem.unlock('capture-combo');
+    }
+
+    if (this.gameState.territoryScore[this.gameState.currentPlayer] >= 50) {
+      achievementSystem.unlock('territory-master');
+    }
+
+    if (this.gameState.moveCount >= 200) {
+      achievementSystem.unlock('patience');
+    }
+  }
+
+  private checkGameEndAchievements(winner: "black" | "white" | "draw") {
+    if (winner !== "draw") {
+      this.gamesPlayed++;
+      localStorage.setItem('go-games-played', this.gamesPlayed.toString());
+
+      if (this.gamesPlayed === 1) {
+        achievementSystem.unlock('beginner');
+      }
+      if (this.gamesPlayed === 10) {
+        achievementSystem.unlock('veteran');
+      }
+
+      if (this.gameState.moveCount < 50) {
+        achievementSystem.unlock('quick-win');
+      }
+
+      const winnerCaptured = this.gameState.capturedStones[winner];
+      if (winnerCaptured === 0) {
+        achievementSystem.unlock('perfect-game');
+      }
+
+      const corners = [
+        [0, 0], [0, this.BOARD_SIZE - 1],
+        [this.BOARD_SIZE - 1, 0], [this.BOARD_SIZE - 1, this.BOARD_SIZE - 1]
+      ];
+      const cornerControl = corners.every(([r, c]) => this.gameState.board[r][c] === winner);
+      if (cornerControl) {
+        achievementSystem.unlock('corner-master');
+      }
+    }
+  }
+
+  private loadGameStats() {
+    const saved = localStorage.getItem('go-games-played');
+    this.gamesPlayed = saved ? parseInt(saved) : 0;
+  }
+
+  private showAchievementsModal() {
+    const achievements = achievementSystem.getAll();
+    const progress = achievementSystem.getProgress();
+
+    let modal = document.getElementById('achievementsModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'achievementsModal';
+      modal.className = 'modal-overlay';
+      document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+      <div class="modal-content achievements-modal">
+        <h2>Achievements</h2>
+        <div class="achievement-progress">
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${progress.percentage}%"></div>
+          </div>
+          <div class="progress-text">${progress.unlocked} / ${progress.total} (${progress.percentage}%)</div>
+        </div>
+        <div class="achievements-grid">
+          ${achievements.map(ach => `
+            <div class="achievement-card ${ach.unlocked ? 'unlocked' : 'locked'}">
+              <div class="achievement-icon">${ach.icon}</div>
+              <div class="achievement-info">
+                <div class="achievement-title">${ach.title}</div>
+                <div class="achievement-description">${ach.description}</div>
+                ${ach.unlocked && ach.unlockedAt ? `
+                  <div class="achievement-unlocked-date">
+                    Unlocked: ${new Date(ach.unlockedAt).toLocaleDateString()}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <button class="btn btn-primary" onclick="document.getElementById('achievementsModal').remove()">Close</button>
+      </div>
+    `;
+
+    modal.style.display = 'flex';
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.remove();
+    };
   }
 
   private aiMove() {
@@ -309,7 +645,7 @@ class FutureGoGame {
     let bestScore = -Infinity;
 
     for (const [row, col] of emptyPositions) {
-      const score = this.evaluateMove(row, col);
+      const score = this.aiEngine.evaluateMove(row, col, this.gameState.board, this.gameState.currentPlayer);
       if (score > bestScore) {
         bestScore = score;
         bestMove = [row, col];
@@ -340,35 +676,6 @@ class FutureGoGame {
     return hasLiberty;
   }
 
-  private evaluateMove(row: number, col: number): number {
-    let score = 0;
-    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-
-    for (const [dr, dc] of dirs) {
-      const nr = row + dr;
-      const nc = col + dc;
-      if (this.isValidPosition(nr, nc)) {
-        const stone = this.gameState.board[nr][nc];
-        if (stone === this.gameState.currentPlayer) {
-          score += 2;
-        } else if (stone !== null) {
-          score += 1;
-        }
-      }
-    }
-
-    const edgeBonus =
-      (row === 0 || row === this.BOARD_SIZE - 1 ||
-       col === 0 || col === this.BOARD_SIZE - 1) ? -3 : 0;
-    const centerBonus =
-      (Math.abs(row - this.BOARD_SIZE / 2) < 3 &&
-       Math.abs(col - this.BOARD_SIZE / 2) < 3) ? 5 : 0;
-
-    score += edgeBonus + centerBonus;
-    score += Math.random() * 2;
-
-    return score;
-  }
 
   private startDemo() {
     if (this.demoInterval) return;
@@ -399,6 +706,7 @@ class FutureGoGame {
   private async endGame(reason: string) {
     if (this.gameState.gamePhase === "finished") return;
     this.gameState.gamePhase = "finished";
+    this.stopTimer();
     this.updateScores();
 
     const blackStones = this.gameState.totalScore.black;
@@ -408,11 +716,17 @@ class FutureGoGame {
     const blackTotal = blackStones + blackTerritory;
     const whiteTotal = whiteStones + whiteTerritory;
 
+    let winner: "black" | "white" | "draw" = "draw";
+    if (blackTotal > whiteTotal) winner = "black";
+    else if (whiteTotal > blackTotal) winner = "white";
+
+    this.checkGameEndAchievements(winner);
+
     let winnerText = "";
-    if (blackTotal > whiteTotal) winnerText = `🏆 ${this.player1Name} (Black) wins!`;
+    if (blackTotal > whiteTotal) winnerText = `${this.player1Name} (Black) wins!`;
     else if (whiteTotal > blackTotal)
-      winnerText = `🏆 ${this.player2Name} (White) wins!`;
-    else winnerText = "🤝 It's a draw!";
+      winnerText = `${this.player2Name} (White) wins!`;
+    else winnerText = "It's a draw!";
 
     const gameOverDisplay = document.getElementById("gameOverDisplay");
     const gameOverReason = document.getElementById("gameOverReason");
@@ -549,18 +863,23 @@ class FutureGoGame {
   private draw() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.drawBoard();
-    this.drawTerritoryOverlay();
+    if (this.gameState.showTerritoryPreview || this.gameState.gamePhase === "finished") {
+      this.drawTerritoryOverlay();
+    }
     this.drawStones();
+    this.drawLastMoveMarker();
+    this.drawHoverPreview();
   }
 
   private drawBoard() {
+    const theme = themeManager.getThemeConfig();
     const g = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
-    g.addColorStop(0, "#d7b37d");
-    g.addColorStop(1, "#c49a6c");
+    g.addColorStop(0, theme.boardGradient.start);
+    g.addColorStop(1, theme.boardGradient.end);
     this.ctx.fillStyle = g;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    this.ctx.strokeStyle = "rgba(70,40,10,0.9)";
+    this.ctx.strokeStyle = theme.gridColor;
     for (let i = 0; i < this.BOARD_SIZE; i++) {
       const pos = (i + 0.5) * this.CELL_SIZE;
       this.ctx.beginPath();
@@ -572,19 +891,41 @@ class FutureGoGame {
       this.ctx.lineTo(this.canvas.width - this.CELL_SIZE / 2, pos);
       this.ctx.stroke();
     }
+
+    const starPoints = this.getStarPoints();
+    this.ctx.fillStyle = theme.gridColor;
+    for (const [row, col] of starPoints) {
+      const x = (col + 0.5) * this.CELL_SIZE;
+      const y = (row + 0.5) * this.CELL_SIZE;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, 3, 0, 2 * Math.PI);
+      this.ctx.fill();
+    }
+  }
+
+  private getStarPoints(): [number, number][] {
+    if (this.BOARD_SIZE === 19) {
+      return [[3, 3], [3, 9], [3, 15], [9, 3], [9, 9], [9, 15], [15, 3], [15, 9], [15, 15]];
+    } else if (this.BOARD_SIZE === 13) {
+      return [[3, 3], [3, 9], [6, 6], [9, 3], [9, 9]];
+    } else if (this.BOARD_SIZE === 9) {
+      return [[2, 2], [2, 6], [4, 4], [6, 2], [6, 6]];
+    }
+    return [];
   }
 
   private drawTerritoryOverlay() {
+    const theme = themeManager.getThemeConfig();
     for (let row = 0; row < this.BOARD_SIZE; row++) {
       for (let col = 0; col < this.BOARD_SIZE; col++) {
         const owner = this.gameState.territoryMap[row][col];
         if (owner && owner !== "neutral") {
           const x = (col + 0.5) * this.CELL_SIZE;
           const y = (row + 0.5) * this.CELL_SIZE;
-          this.ctx.globalAlpha = 0.25;
+          this.ctx.globalAlpha = theme.territoryAlpha;
           this.ctx.beginPath();
           this.ctx.arc(x, y, 6, 0, 2 * Math.PI);
-          this.ctx.fillStyle = owner === "black" ? "#000" : "#fff";
+          this.ctx.fillStyle = owner === "black" ? theme.blackStone : theme.whiteStone;
           this.ctx.fill();
           this.ctx.globalAlpha = 1.0;
         }
@@ -592,9 +933,40 @@ class FutureGoGame {
     }
   }
 
+  private drawLastMoveMarker() {
+    if (!this.gameState.lastMove) return;
+
+    const { row, col } = this.gameState.lastMove;
+    const x = (col + 0.5) * this.CELL_SIZE;
+    const y = (row + 0.5) * this.CELL_SIZE;
+
+    this.ctx.strokeStyle = '#FF4444';
+    this.ctx.lineWidth = 2;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, this.STONE_RADIUS + 3, 0, 2 * Math.PI);
+    this.ctx.stroke();
+  }
+
+  private drawHoverPreview() {
+    if (!this.hoverPosition) return;
+
+    const { row, col } = this.hoverPosition;
+    const x = (col + 0.5) * this.CELL_SIZE;
+    const y = (row + 0.5) * this.CELL_SIZE;
+
+    const theme = themeManager.getThemeConfig();
+    this.ctx.globalAlpha = 0.4;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, this.STONE_RADIUS, 0, 2 * Math.PI);
+    this.ctx.fillStyle = this.gameState.currentPlayer === "black" ? theme.blackStone : theme.whiteStone;
+    this.ctx.fill();
+    this.ctx.globalAlpha = 1.0;
+  }
+
   private drawStones() {
     const now = performance.now();
     const animationDuration = 300;
+    const theme = themeManager.getThemeConfig();
 
     for (let row = 0; row < this.BOARD_SIZE; row++) {
       for (let col = 0; col < this.BOARD_SIZE; col++) {
@@ -602,9 +974,34 @@ class FutureGoGame {
         if (!stone) continue;
         const x = (col + 0.5) * this.CELL_SIZE;
         const y = (row + 0.5) * this.CELL_SIZE;
+
         this.ctx.beginPath();
         this.ctx.arc(x, y, this.STONE_RADIUS, 0, 2 * Math.PI);
-        this.ctx.fillStyle = stone === "black" ? "#000" : "#fff";
+        this.ctx.fillStyle = stone === "black" ? theme.blackStone : theme.whiteStone;
+        this.ctx.fill();
+
+        if (stone === "white") {
+          this.ctx.strokeStyle = "rgba(0,0,0,0.2)";
+          this.ctx.lineWidth = 1;
+          this.ctx.stroke();
+        }
+
+        const gradient = this.ctx.createRadialGradient(
+          x - this.STONE_RADIUS * 0.3,
+          y - this.STONE_RADIUS * 0.3,
+          0,
+          x,
+          y,
+          this.STONE_RADIUS
+        );
+        if (stone === "black") {
+          gradient.addColorStop(0, "rgba(100,100,100,0.3)");
+          gradient.addColorStop(1, "rgba(0,0,0,0)");
+        } else {
+          gradient.addColorStop(0, "rgba(255,255,255,0.8)");
+          gradient.addColorStop(1, "rgba(255,255,255,0)");
+        }
+        this.ctx.fillStyle = gradient;
         this.ctx.fill();
       }
     }
@@ -619,9 +1016,8 @@ class FutureGoGame {
       const alpha = 1 - progress;
       const radius = this.STONE_RADIUS * (1 + progress * 0.5);
 
-      const stoneColor = this.gameState.board[anim.row]?.[anim.col] === "black" ? "#000" : "#fff";
       const capturedByBlack = this.gameState.capturedStones.black > this.gameState.capturedStones.white;
-      const captureColor = capturedByBlack ? "#000" : "#fff";
+      const captureColor = capturedByBlack ? theme.blackStone : theme.whiteStone;
 
       this.ctx.globalAlpha = alpha;
       this.ctx.beginPath();
@@ -638,11 +1034,13 @@ class FutureGoGame {
   private updateUI() {
     const currentPlayerEl = document.getElementById("currentPlayer");
     const moveCountEl = document.getElementById("moveCount");
+    const historyCountEl = document.getElementById("historyCount");
 
     if (currentPlayerEl)
       currentPlayerEl.textContent =
         this.gameState.currentPlayer === "black" ? "Black" : "White";
     if (moveCountEl) moveCountEl.textContent = this.gameState.moveCount.toString();
+    if (historyCountEl) historyCountEl.textContent = this.gameState.moveHistory.length.toString();
 
     const blackCapturedEl = document.getElementById("blackCaptured");
     const whiteCapturedEl = document.getElementById("whiteCaptured");
@@ -667,6 +1065,26 @@ class FutureGoGame {
 
     if (blackTotalEl) blackTotalEl.textContent = blackTotal.toString();
     if (whiteTotalEl) whiteTotalEl.textContent = whiteTotal.toString();
+
+    const timerDisplay = document.getElementById('timerDisplay');
+    const enableTimer = document.getElementById('enableTimer') as HTMLInputElement;
+    if (timerDisplay && enableTimer?.checked && this.gameState.timeControl) {
+      timerDisplay.style.display = 'block';
+      const blackTimer = document.getElementById('blackTimer');
+      const whiteTimer = document.getElementById('whiteTimer');
+      if (blackTimer) {
+        const minutes = Math.floor(this.gameState.timeControl.black / 60000);
+        const seconds = Math.floor((this.gameState.timeControl.black % 60000) / 1000);
+        blackTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      }
+      if (whiteTimer) {
+        const minutes = Math.floor(this.gameState.timeControl.white / 60000);
+        const seconds = Math.floor((this.gameState.timeControl.white % 60000) / 1000);
+        whiteTimer.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      }
+    } else if (timerDisplay) {
+      timerDisplay.style.display = 'none';
+    }
   }
 
   // ======================= Sound Effects =======================

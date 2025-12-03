@@ -73,14 +73,36 @@
     </div>
     
     <div class="game-info">
-      <!-- Player naming area -->
+      <!-- Game Settings -->
       <div class="player-setup">
-        <h3>Players</h3>
+        <h3>Game Settings</h3>
         <div class="player-inputs">
-          <label for="blackName">Black Player:</label>
-          <input id="blackName" type="text" placeholder="e.g. Alice" value="BlackAI">
-          <label for="whiteName">White Player:</label>
-          <input id="whiteName" type="text" placeholder="e.g. Bob" value="WhiteAI">
+          <label for="boardSize">Board Size:</label>
+          <select id="boardSize" class="game-select">
+            <option value="9">9x9 (Quick)</option>
+            <option value="13">13x13 (Medium)</option>
+            <option value="19" selected>19x19 (Standard)</option>
+          </select>
+
+          <label for="aiDifficulty">AI Difficulty:</label>
+          <select id="aiDifficulty" class="game-select">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+
+          <label for="boardTheme">Board Theme:</label>
+          <select id="boardTheme" class="game-select">
+            <option value="classic" selected>Classic Wood</option>
+            <option value="modern">Modern Blue</option>
+            <option value="dark">Dark Mode</option>
+            <option value="bamboo">Bamboo Forest</option>
+          </select>
+
+          <label style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+            <input type="checkbox" id="enableTimer">
+            Enable Timer (10 min)
+          </label>
         </div>
       </div>
 
@@ -152,10 +174,20 @@
           <span class="label">Moves:</span>
           <span id="moveCount" class="value">0</span>
         </div>
+        <div class="stat-item">
+          <span class="label">History:</span>
+          <span id="historyCount" class="value">0</span>
+        </div>
         <div id="gameStatus" class="game-status playing">Manual Play Mode</div>
-        <div class="stat-item" style="margin-top: 10px; padding: 8px; background: #e8f5e9; border-radius: 6px; font-size: 13px;">
-          <strong>🌐 Local Server:</strong><br>
-          <code style="background: #fff; padding: 2px 6px; border-radius: 3px; display: inline-block; margin-top: 4px;">http://localhost:5173</code>
+        <div id="timerDisplay" class="timer-display" style="display: none;">
+          <div class="timer-row">
+            <span>Black:</span>
+            <span id="blackTimer" class="timer-value">10:00</span>
+          </div>
+          <div class="timer-row">
+            <span>White:</span>
+            <span id="whiteTimer" class="timer-value">10:00</span>
+          </div>
         </div>
       </div>
 
@@ -166,10 +198,15 @@
       </div>
 
       <div class="controls">
-        <button id="startDemo" class="btn btn-demo">Start Demo</button>
-        <button id="stopDemo" class="btn btn-demo">Stop Demo</button>
-        <button id="pass" class="btn btn-secondary">Pass</button>
         <button id="newGame" class="btn btn-primary">New Game</button>
+        <button id="pass" class="btn btn-secondary">Pass</button>
+        <button id="undoMove" class="btn btn-secondary">Undo Move</button>
+        <button id="showHint" class="btn btn-secondary">Show Hint</button>
+        <button id="toggleTerritory" class="btn btn-secondary">Toggle Territory</button>
+        <button id="replayGame" class="btn btn-demo">Replay Game</button>
+        <button id="viewAchievements" class="btn btn-demo">Achievements</button>
+        <button id="startDemo" class="btn btn-demo">Start AI Demo</button>
+        <button id="stopDemo" class="btn btn-demo">Stop Demo</button>
       </div>
     </div>
   </div>
