@@ -13,194 +13,182 @@ Unoccupied intersections on the board are known as liberties. Stones of the same
 The game ends either when one side forfeits or if both sides agree that all possible moves have been exhausted. Stones that both sides agree could be inevitably captured are marked out as ‘dead’ and removed from the board while others are considered ‘alive’. These decisions must be made with the consent of both players. Then, one side’s score is counted and compared to 180-1/2, and if it is lower, the other side wins, if it’s higher, then they win, and if it is equal, it is considered a draw. 
 In modern national competitions, 2-3/4 points are deducted from black’s score to counteract the advantage of black going first. The player may not move a stone once it is placed down on the board unless it slips out of the player’s hand by accident. 
 
-Here’s a clean, professional **GitHub README.md** for your project — formatted for a repository like `GoGame-AI` or `FutureGo`.
+---
+
+# We-Have-Nothing — Go (囲碁) Capstone
+
+A web-based **Go (囲碁)** game built by **Team We Have Nothing**.
+This project combines a **TypeScript + Canvas + Vite** frontend with a **FastAPI + SQLite** backend that powers game recording, a live leaderboard, and multiplayer rooms via WebSockets.
+
+## Live Demo
+
+* **Frontend (Netlify):** [https://we-have-nothing.netlify.app](https://we-have-nothing.netlify.app)
+* **Backend (Render):** [https://we-have-nothing.onrender.com](https://we-have-nothing.onrender.com)
 
 ---
 
-# 🏯 Future Go (囲碁) — AI vs Human Web Game
+## Features
 
-An interactive **Go (囲碁)** web game built with **TypeScript**, featuring:
+* **19×19 Go board**
+* **Local Player vs Player**
+* **Player vs AI** (simple/random move logic)
+* **AI vs AI Demo mode**
+* **Live score UI**
 
-* Human vs Human (PVP)
-* Human (Black) vs AI
-* Human (White) vs AI
-* AI vs AI Demo mode
-  with real-time score tracking and a live leaderboard backed by a FastAPI backend.
+  * placed stone count
+  * territory preview logic
+* **Leaderboard**
+
+  * tracks players and wins
+  * updates after game end
+* **Multiplayer Rooms (WebSockets)**
+
+  * join a room by name
+  * moves broadcast to other clients
+
+> This is a capstone implementation focused on interactive play and system integration rather than tournament-perfect Go rules.
 
 ---
 
-## 🎮 Features
+## Tech Stack
 
-Human vs Human (Local PVP)
+**Frontend**
 
-Human vs AI (Random AI logic)
+* TypeScript
+* Vite
+* HTML/CSS
+* Canvas API
 
-AI vs AI Demo Mode
+**Backend**
 
-Online Multiplayer (via WebSockets)
+* FastAPI
+* SQLite
+* WebSockets (FastAPI)
 
-Live Leaderboard (FastAPI + SQLite backend)
+---
 
-Smooth UI built with Canvas and CSS
-
-Deployed live:
-
-Frontend: https://we-have-nothing.netlify.app
-
-Backend: https://we-have-nothing.onrender.com
-
-## 🧩 Project Structure
+## Project Structure
 
 ```
-project/
+WE-HAVE-NOTHING/
 │
+├── index.html
 ├── src/
-│   ├── main.ts          # Core game logic (TypeScript)
-│   ├── style.css        # Additional CSS styling (optional)
+│   ├── main.ts
+│   ├── style.css
+│   └── chat-ui.ts (if used)
 │
-├── index.html           # UI and DOM layout
-├── server.py            # FastAPI backend (records players/games)
-├── requirements.txt     # Python dependencies
-├── package.json         # Node.js frontend dependencies
-└── README.md            # You are here
+├── dist/                 # build output (auto-generated)
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+│
+└── backend/
+    ├── server.py
+    ├── requirements.txt
+    └── *.db
 ```
 
 ---
 
-## ⚙️ Installation & Setup
+## Local Setup
 
-### 1. Clone the Repository
+### 1) Clone
 
-```bash
-git clone https://github.com/yourusername/futurego.git
-cd futurego
+```
+git clone https://github.com/J72003/We-Have-Nothing.git
+cd We-Have-Nothing
 ```
 
-### 2. Backend Setup (Python / FastAPI)
+---
 
-Create a virtual environment and install dependencies:
+### 2) Backend (FastAPI)
 
-```bash
+```
 cd backend
 pip install -r requirements.txt
-```
-
-Run the server:
-
-```bash
 uvicorn server:app --reload --port 8010
 ```
 
-> The backend runs at `http://127.0.0.1:8010`
+Backend will run at:
+
+```
+http://localhost:8010
+```
 
 ---
 
-### 3. Frontend Setup (TypeScript / Vite)
+### 3) Frontend (Vite)
 
-```bash
-cd frontend
+From project root:
+
+```
 npm install
 npm run dev
 ```
 
-Then open the local server (usually `http://localhost:5173`) to play.
+Frontend will run at:
+
+```
+http://localhost:3000
+```
 
 ---
 
-## 💾 API Endpoints (FastAPI)
+## Environment Configuration (Recommended)
 
-| Endpoint       | Method | Description                            |
-| -------------- | ------ | -------------------------------------- |
-| `/players`     | POST   | Add or register a player               |
-| `/games`       | POST   | Record game results                    |
-| `/leaderboard` | GET    | Fetch all players and their win counts |
+Right now the frontend is configured to use the production Render backend by default.
+For clean local dev, create a `.env` in the project root:
 
----
+```
+VITE_API_BASE=http://localhost:8010
+VITE_WS_BASE=ws://localhost:8010
+```
 
-## 🧠 Gameplay Summary
+Then update your `main.ts` to use:
 
-| Action          | Description                                            |
-| --------------- | ------------------------------------------------------ |
-| **Click board** | Place a stone on an empty intersection                 |
-| **Pass**        | Skips your turn (two consecutive passes = end of game) |
-| **New Game**    | Resets board and scoreboard                            |
-| **Start Demo**  | Starts AI vs AI autoplay                               |
-| **Stop Demo**   | Ends demo mode                                         |
+```ts
+const API_BASE =
+  import.meta.env.VITE_API_BASE ?? "https://we-have-nothing.onrender.com";
 
----
-
-## 🪄 Technical Highlights
-
-* **Canvas Rendering:** Dynamic Go grid with live updates
-* **Score Computation:** Uses BFS flood-fill to detect territory ownership
-* **Sound Feedback:** Simple tone when placing stones
-* **Leaderboard:** Fully dynamic, synced with backend database
-* **TypeScript Architecture:** Class-based, modular, maintainable structure
+const WS_BASE =
+  import.meta.env.VITE_WS_BASE ?? "wss://we-have-nothing.onrender.com";
+```
 
 ---
 
-## ✨ NEW FEATURES (2025 Update)
+## API Endpoints
 
-### Gameplay Enhancements
-* **Standard 19x19 Board**: Traditional full-size Go board
-* **Move History & Undo**: Full move history tracking with ability to undo moves
-* **Hover Preview**: See a preview of your stone before placing it
-* **Last Move Highlight**: Visual indicator of the most recent move
-* **Territory Preview Toggle**: View territory calculations during gameplay
-* **Hint System**: Get AI suggestions for your next move
-* **Game Replay**: Review completed games move-by-move
-
-### Visual & Polish
-* **Multiple Board Themes**:
-  - Classic Wood (traditional)
-  - Modern Blue (contemporary)
-  - Dark Mode (night-friendly)
-  - Bamboo Forest (nature-inspired)
-* **Improved Stone Animations**: Smooth placement with realistic gradients
-* **Star Points**: Traditional board markers for all board sizes
-* **Enhanced Capture Effects**: Better visual feedback for captured stones
-
-### Achievement System
-* **12 Unique Achievements**: Track your progress and milestones
-  - First Stone, First Blood, Territory Master
-  - Combo Master, Speed Demon, Patient Player
-  - Corner King, Perfect Victory, Comeback Kid
-  - Getting Started, Veteran Player, Go Master
-* **Achievement Notifications**: Beautiful pop-up notifications when unlocking achievements
-* **Progress Tracking**: View all achievements and your completion percentage
-
-### Game Features
-* **Chess Clock Timer**: Optional 10-minute timer for each player
-* **Game Statistics**: Track moves, history, and time remaining
-* **Persistent Progress**: Achievements and stats saved locally
-
-### Future Improvements
-* Smarter AI using Monte Carlo Tree Search
-* Daily challenges and puzzles
-* Online multiplayer rankings
-* Share game replays via URL
-* Tutorial mode for beginners
-* More board themes and customization
+| Endpoint        | Method | Description                    |
+| --------------- | ------ | ------------------------------ |
+| `/players`      | POST   | Register/add a player          |
+| `/players`      | GET    | List all players               |
+| `/games`        | POST   | Record a completed game        |
+| `/leaderboard`  | GET    | Get leaderboard sorted by wins |
+| `/ws/{room_id}` | WS     | Multiplayer room channel       |
 
 ---
 
-## 📸 Preview
 
+## Scoring Notes
+
+This project uses a simplified scoring model suitable for a capstone demo:
+
+* Counts placed stones
+* Estimates territory using region/border detection
+* Updates the UI live
 
 ---
 
-## 🧾 License
+## Credits
 
-This project is licensed under the **MIT License** — free to use and modify.
+**Team:** We Have Nothing
+**Capstone Project:** Go (囲碁) Web Game
 
 ---
 
-## 👥 Credits
+## License
 
-**Developed by:** We Have Nothing
-
-**Stack:** TypeScript · Vite · FastAPI · Canvas API
-
-**Inspiration:** Traditional Go (囲碁) with modern web interactivity
+MIT
 
 
