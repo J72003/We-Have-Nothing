@@ -59,8 +59,8 @@
       font-weight: bold;
     }
   </style>
-  <script type="module" crossorigin src="/assets/index-C34_SYkf.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-DRTw6D-o.css">
+  <script type="module" crossorigin src="/assets/index-D4XF4-wO.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DUpNMuaE.css">
 </head>
 
 <body>
@@ -74,20 +74,36 @@
     </div>
     
     <div class="game-info">
-      <!-- Player naming area -->
+      <!-- Game Settings -->
       <div class="player-setup">
-        <h3>Players</h3>
+        <h3>Game Settings</h3>
         <div class="player-inputs">
-          <label for="blackName">Black Player:</label>
-          <input id="blackName" type="text" placeholder="e.g. Alice" value="BlackAI">
-          <label for="whiteName">White Player:</label>
-          <input id="whiteName" type="text" placeholder="e.g. Bob" value="WhiteAI">
+          <label for="boardTheme">Board Theme:</label>
+          <select id="boardTheme" class="game-select">
+            <option value="classic" selected>Classic Wood</option>
+            <option value="modern">Modern Blue</option>
+            <option value="dark">Dark Mode</option>
+            <option value="bamboo">Bamboo Forest</option>
+          </select>
+
+          <label style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+            <input type="checkbox" id="enableTimer">
+            Enable Timer (10 min)
+          </label>
         </div>
       </div>
 
       <div class="current-turn">
         <h3>Current Turn</h3>
         <div id="currentPlayer" class="current-player black">Black</div>
+      </div>
+
+      <!-- Game Over Display -->
+      <div id="gameOverDisplay" style="display: none; background: linear-gradient(145deg, #f39c12, #e67e22); padding: 20px; border-radius: 12px; margin-bottom: 15px; text-align: center; border: 3px solid #d35400; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+        <h3 style="margin: 0 0 10px 0; color: white; font-size: 1.3rem;">Game Over!</h3>
+        <div id="gameOverReason" style="color: white; font-size: 0.9rem; margin-bottom: 12px;"></div>
+        <div id="gameOverScores" style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; color: white; font-size: 0.95rem; line-height: 1.6;"></div>
+        <div id="gameOverWinner" style="font-size: 1.5rem; font-weight: bold; color: white; margin-top: 12px;"></div>
       </div>
       
       <div class="score-section">
@@ -145,20 +161,55 @@
           <span class="label">Moves:</span>
           <span id="moveCount" class="value">0</span>
         </div>
+        <div class="stat-item">
+          <span class="label">History:</span>
+          <span id="historyCount" class="value">0</span>
+        </div>
         <div id="gameStatus" class="game-status playing">Manual Play Mode</div>
+        <div id="timerDisplay" class="timer-display" style="display: none;">
+          <div class="timer-row">
+            <span>Black:</span>
+            <span id="blackTimer" class="timer-value">10:00</span>
+          </div>
+          <div class="timer-row">
+            <span>White:</span>
+            <span id="whiteTimer" class="timer-value">10:00</span>
+          </div>
+        </div>
       </div>
 
-      <div class="mode-buttons">
-        <button id="pvpMode" class="btn btn-primary">Player vs Player</button>
-        <button id="pveMode" class="btn btn-secondary">Player vs AI</button>
-        <button id="aiMode" class="btn btn-demo">AI vs AI Demo</button>
+      <div class="controls-section">
+        <h4 class="controls-heading">Game Mode</h4>
+        <div class="controls-group">
+          <button id="pvpMode" class="btn btn-primary">Player vs Player</button>
+          <button id="pveMode" class="btn btn-secondary">Player vs AI</button>
+          <button id="aiMode" class="btn btn-demo">AI vs AI Demo</button>
+        </div>
       </div>
 
-      <div class="controls">
-        <button id="startDemo" class="btn btn-demo">Start Demo</button>
-        <button id="stopDemo" class="btn btn-demo">Stop Demo</button>
-        <button id="pass" class="btn btn-secondary">Pass</button>
-        <button id="newGame" class="btn btn-primary">New Game</button>
+      <div class="controls-section">
+        <h4 class="controls-heading">Game Controls</h4>
+        <div class="controls-group">
+          <button id="newGame" class="btn btn-primary">New Game</button>
+          <button id="pass" class="btn btn-secondary">Pass</button>
+          <button id="undoMove" class="btn btn-secondary">Undo</button>
+        </div>
+      </div>
+
+      <div class="controls-section">
+        <h4 class="controls-heading">Assistance</h4>
+        <div class="controls-group">
+          <button id="showHint" class="btn btn-secondary">Show Hint</button>
+          <button id="toggleTerritory" class="btn btn-secondary">Toggle Territory</button>
+        </div>
+      </div>
+
+      <div class="controls-section">
+        <h4 class="controls-heading">View</h4>
+        <div class="controls-group">
+          <button id="replayGame" class="btn btn-demo">Replay Game</button>
+          <button id="viewAchievements" class="btn btn-demo">Achievements</button>
+        </div>
       </div>
     </div>
   </div>
