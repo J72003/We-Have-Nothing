@@ -19,6 +19,7 @@ class FutureGoGame {
   private replayIndex = 0;
   private timerInterval: number | null = null;
   private gamesPlayed = 0;
+  private hintPosition: { row: number; col: number; alpha: number } | null = null;
   private player1Name: string = "Player 1";
   private player2Name: string = "Player 2";
   private socket: WebSocket | null = null;
@@ -325,39 +326,25 @@ class FutureGoGame {
   }
 
   private highlightHint(row: number, col: number) {
-    const x = (col + 0.5) * this.CELL_SIZE;
-    const y = (row + 0.5) * this.CELL_SIZE;
-    let alpha = 0.8;
+    this.hintPosition = { row, col, alpha: 1.0 };
 
-    const animate = () => {
-      alpha -= 0.02;
-      if (alpha > 0) {
-        requestAnimationFrame(animate);
-      }
-    };
-
-    const originalDraw = this.draw.bind(this);
-    this.draw = () => {
-      originalDraw();
-      if (alpha > 0) {
-        this.ctx.globalAlpha = alpha;
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, this.STONE_RADIUS + 4, 0, 2 * Math.PI);
-        this.ctx.strokeStyle = '#FFD700';
-        this.ctx.lineWidth = 3;
-        this.ctx.stroke();
-        this.ctx.globalAlpha = 1.0;
+    const fadeHint = () => {
+      if (this.hintPosition && this.hintPosition.alpha > 0) {
+        this.hintPosition.alpha -= 0.015;
+        requestAnimationFrame(fadeHint);
       } else {
-        this.draw = originalDraw;
+        this.hintPosition = null;
       }
     };
 
-    animate();
+    fadeHint();
   }
 
   private toggleTerritoryPreview() {
     this.gameState.showTerritoryPreview = !this.gameState.showTerritoryPreview;
-    this.updateUI();
+    if (this.gameState.showTerritoryPreview) {
+      this.updateScores();
+    }
   }
 
   private hasLibertyCheck(row: number, col: number): boolean {
@@ -877,6 +864,28 @@ class FutureGoGame {
     this.drawStones();
     this.drawLastMoveMarker();
     this.drawHoverPreview();
+    this.drawHintMarker();
+  }
+
+  private drawHintMarker() {
+    if (!this.hintPosition || this.hintPosition.alpha <= 0) return;
+
+    const { row, col, alpha } = this.hintPosition;
+    const x = (col + 0.5) * this.CELL_SIZE;
+    const y = (row + 0.5) * this.CELL_SIZE;
+
+    this.ctx.globalAlpha = alpha;
+    this.ctx.strokeStyle = '#FFD700';
+    this.ctx.lineWidth = 3;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, this.STONE_RADIUS + 4, 0, 2 * Math.PI);
+    this.ctx.stroke();
+
+    this.ctx.fillStyle = '#FFD700';
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, 4, 0, 2 * Math.PI);
+    this.ctx.fill();
+    this.ctx.globalAlpha = 1.0;
   }
 
   private drawBoard() {
