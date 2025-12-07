@@ -41,10 +41,7 @@ This project combines a **TypeScript + Canvas + Vite** frontend with a **FastAPI
 
   * tracks players and wins
   * updates after game end
-* **Multiplayer Rooms (WebSockets)**
 
-  * join a room by name
-  * moves broadcast to other clients
 
 > This is a capstone implementation focused on interactive play and system integration rather than tournament-perfect Go rules.
 
